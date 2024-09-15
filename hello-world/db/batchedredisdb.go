@@ -31,7 +31,8 @@ func (rdb *BatchedRedisDB) Set(k string, v string) error {
 	return nil
 }
 
-func ConsBatchedRedisDB() *RedisDB {
+// This version uses batch for a single 
+func ConsBatchedRedisDB() *BatchedRedisDB {
 	rc := initRedis()
-	return &RedisDB{rc: rc}
+	return &BatchedRedisDB{rc: rc}
 }
