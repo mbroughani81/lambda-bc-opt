@@ -6,57 +6,51 @@ import (
 	"log"
 	"strconv"
 
+	"hello-world/db"
+
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/redis/go-redis/v9"
 )
 
-func initRedis() *redis.Client {
-	return redis.NewClient(&redis.Options{
-		Addr: "10.10.0.1:6379", // Change this to your Redis server address
-		DB:   0,                // Default DB number
-	})
-}
+func Handler(rdb db.KeyValueStoreDB) func(context.Context, events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	return func(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+		cntVal, err := rdb.Get("cnt")
+		if err != nil {
+			return events.APIGatewayProxyResponse{
+				Body:       "Internal Server Error",
+				StatusCode: 500,
+			}, nil
+		}
 
-func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	rdb := initRedis()
+		// Convert the current count to an integer, increment it
+		cnt, _ := strconv.Atoi(cntVal)
+		cnt++
 
-	// Get the current value of "cnt" from Redis
-	cntVal, err := rdb.Get(ctx, "cnt").Result()
-	if err == redis.Nil {
-		// Key does not exist, initialize with 0
-		cntVal = "0"
-	} else if err != nil {
-		log.Printf("Error fetching 'cnt' from Redis: %v", err)
+		// Update the "cnt" key in Redis
+		err = rdb.Set("cnt", strconv.Itoa(cnt))
+		if err != nil {
+			log.Printf("Error updating 'cnt' in Redis: %v", err)
+			return events.APIGatewayProxyResponse{
+				Body:       "Internal Server Error",
+				StatusCode: 500,
+			}, nil
+		}
+
+		greeting := fmt.Sprintf("Hello! You are visitor number %d.\n", cnt)
+		log.Printf("greeting => %s", greeting)
 		return events.APIGatewayProxyResponse{
-			Body:       "Internal Server Error",
-			StatusCode: 500,
+			Body:       greeting,
+			StatusCode: 200,
 		}, nil
 	}
-
-	// Convert the current count to an integer, increment it
-	cnt, _ := strconv.Atoi(cntVal)
-	cnt++
-
-
-	// Update the "cnt" key in Redis
-	err = rdb.Set(ctx, "cnt", cnt, 0).Err()
-	if err != nil {
-		log.Printf("Error updating 'cnt' in Redis: %v", err)
-		return events.APIGatewayProxyResponse{
-			Body:       "Internal Server Error",
-			StatusCode: 500,
-		}, nil
-	}
-
-	greeting := fmt.Sprintf("Hello! You are visitor number %d.\n", cnt)
-	log.Printf("greeting => %s", greeting)
-	return events.APIGatewayProxyResponse{
-		Body:       greeting,
-		StatusCode: 200,
-	}, nil
 }
+
+var counter = 0
 
 func main() {
-	lambda.Start(Handler)
+	rdb := db.ConsRedisDB()
+	counter++
+	log.Printf("counter => %d\n", counter)
+	handler := Handler(rdb)
+	lambda.Start(handler)
 }
