@@ -47,7 +47,8 @@ func Handler(rdb db.KeyValueStoreDB) func(context.Context, events.APIGatewayProx
 
 
 func main() {
-	rdb := db.ConsRedisDB()
+	// rdb := db.ConsRedisDB()
+	rdb := db.ConsBatchedRedisDB()
 	handler := Handler(rdb)
 	lambda.Start(handler)
 }
