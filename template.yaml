@@ -12,12 +12,12 @@ Globals:
     MemorySize: 128
 
 Resources:
-  CreateSubmitFunction:
+  InsertRowFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: go1.x
     Properties:
-      CodeUri: hello-world/handlers/createsubmit
+      CodeUri: hello-world/handlers/insertrow
       Handler: bootstrap
       Runtime: provided.al2023
       Architectures:
@@ -26,8 +26,8 @@ Resources:
         CatchAll:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
-            Path: /helloCreateSubmit
-            Method: GET
+            Path: /insertRow
+            Method: POST
       Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
         Variables:
           PARAM1: VALUE
