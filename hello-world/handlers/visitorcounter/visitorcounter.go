@@ -45,12 +45,9 @@ func Handler(rdb db.KeyValueStoreDB) func(context.Context, events.APIGatewayProx
 	}
 }
 
-var counter = 0
 
 func main() {
 	rdb := db.ConsRedisDB()
-	counter++
-	log.Printf("counter => %d\n", counter)
 	handler := Handler(rdb)
 	lambda.Start(handler)
 }
