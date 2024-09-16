@@ -1,15 +1,33 @@
 package main
 
 import (
-	"log"
-
 	"hello-world/db"
+	"log"
+	"sync"
 )
 
 func main() {
-	op1 := db.GetOp{K: "key1"}
-	op2 := db.GetOp{K: "key2"}
-	db.AppendToBatch(op1)
-	db.AppendToBatch(op2)
-	log.Printf("batch => %#v", db.GetBatch())
+	batchedRedisDB := db.ConsBatchedRedisDB()
+	var wg sync.WaitGroup
+	wg.Add(3)
+
+	go func() {		
+		result, _ := batchedRedisDB.Get("g1")
+		log.Println("result-1 => %s", result)
+		wg.Done()
+	}()
+
+	go func() {		
+		result, _ := batchedRedisDB.Get("g2")
+		log.Println("result-2 => %s", result)
+		wg.Done()
+	}()
+
+	go func() {		
+		result, _ := batchedRedisDB.Get("g3")
+		log.Println("result-3 => %s", result)
+		wg.Done()
+	}()
+
+	wg.Wait()
 }
