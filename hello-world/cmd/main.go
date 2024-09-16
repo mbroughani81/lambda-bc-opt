@@ -11,23 +11,48 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(3)
 
+	// go func() {		
+	// 	batchedRedisDB.Set("g1", "value1")
+	// 	result, _ := batchedRedisDB.Get("g1")
+	// 	log.Println("#1 value1 => %s", result)
+	// 	wg.Done()
+	// }()
+
+	// go func() {		
+	// 	result, _ := batchedRedisDB.Get("g2")
+	// 	log.Println("#2 => %s", result)
+	// 	batchedRedisDB.Set("g2", "value2")
+	// 	result, _ = batchedRedisDB.Get("g2")
+	// 	log.Println("#2 value2 => %s", result)
+	// 	wg.Done()
+	// }()
+
 	go func() {		
 		result, _ := batchedRedisDB.Get("g1")
-		log.Println("result-1 => %s", result)
+		log.Println("#1 => %s", result)
 		wg.Done()
 	}()
+
 
 	go func() {		
 		result, _ := batchedRedisDB.Get("g2")
-		log.Println("result-2 => %s", result)
+		log.Println("#2 => %s", result)
 		wg.Done()
 	}()
 
+
 	go func() {		
 		result, _ := batchedRedisDB.Get("g3")
-		log.Println("result-3 => %s", result)
+		log.Println("#3 => %s", result)
 		wg.Done()
 	}()
 
 	wg.Wait()
+	// xx := []int{1,2,3}
+	// xx = append(xx, 4)
+	// log.Println("%#v", xx)
+	// xx = nil
+	// log.Println("%#v", xx)
+	// xx = append(xx, 1, 2, 3, 4, 5, 6)
+	// log.Println("%#v", xx)
 }
