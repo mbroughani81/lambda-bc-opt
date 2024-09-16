@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -30,7 +31,8 @@ type BatchOp struct {
 }
 
 var batch []BatchOp
-var batchSize = 3
+var batchSize = 100
+var loopInterval = 2 * time.Second
 
 var mu sync.Mutex
 
@@ -102,9 +104,9 @@ func AppendToBatch(rdb *BatchedRedisDB, op Op, ch chan string) {
 		}
 		if len(batch) >= batchSize {
 			ExecBatch(rdb)
+			// delete the batch
 			batch = nil
 		}
-		// delete the batch
 	}()
 }
 
@@ -131,5 +133,17 @@ func (rdb *BatchedRedisDB) Set(k string, v string) error {
 
 func ConsBatchedRedisDB() *BatchedRedisDB {
 	rc := initRedis()
-	return &BatchedRedisDB{rc: rc}
+	rdb := BatchedRedisDB{rc: rc}
+
+	go func(rdb *BatchedRedisDB) {
+		for now := range time.Tick(loopInterval) {
+			mu.Lock()
+			ExecBatch(rdb)
+			batch = nil
+			log.Printf("Executing batch => %s", now)
+			mu.Unlock()
+		}
+	}(&rdb)
+
+	return &rdb
 }
