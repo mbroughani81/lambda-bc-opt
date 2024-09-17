@@ -6,7 +6,7 @@ import (
 	"log"
 	"strconv"
 
-	"hello-world/db"
+	"lambda-bc-opt/db"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"

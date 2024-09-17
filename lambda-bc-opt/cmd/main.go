@@ -1,7 +1,7 @@
 package main
 
 import (
-	"hello-world/db"
+	"lambda-bc-opt/db"
 	"log"
 	"sync"
 )

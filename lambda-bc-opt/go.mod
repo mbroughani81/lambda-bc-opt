@@ -5,6 +5,6 @@ require (
 
 replace gopkg.in/yaml.v2 => gopkg.in/yaml.v2 v2.2.8
 
-module hello-world
+module lambda-bc-opt
 
 go 1.16
