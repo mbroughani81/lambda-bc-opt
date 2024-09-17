@@ -32,7 +32,7 @@ type BatchOp struct {
 
 var batch []BatchOp
 var batchSize = 100
-var loopInterval = 2 * time.Second
+var loopInterval = 200 * time.Millisecond
 
 var mu sync.Mutex
 
@@ -56,6 +56,7 @@ func ExecBatch(rdb *BatchedRedisDB) {
 	}
 	// executing the pipeline
 	log.Printf("Executing the pipeline => %#v", batch)
+	log.Printf("size of batch => %d", len(batch))
 	_, err := pipe.Exec(ctx)
 	if err != nil && err != redis.Nil {
 		log.Fatalf("Executing the pipeline failed! => %v", err)

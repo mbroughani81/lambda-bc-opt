@@ -20,6 +20,7 @@ Resources:
       CodeUri: lambda-bc-opt/handlers/visitorcounter
       Handler: bootstrap
       Runtime: provided.al2023
+      Timeout: 20
       Architectures:
         - x86_64
       Events:

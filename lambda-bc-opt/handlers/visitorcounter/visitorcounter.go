@@ -1,6 +1,8 @@
 package main
 
 import (
+	// "os"
+	// "io"
 	"context"
 	"fmt"
 	"log"
@@ -47,6 +49,14 @@ func Handler(rdb db.KeyValueStoreDB) func(context.Context, events.APIGatewayProx
 
 
 func main() {
+	// logFile, err := os.OpenFile("server.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	// if err != nil {
+	// 	log.Fatalf("Failed to open log file: %v", err)
+	// }
+	// defer logFile.Close()
+	// multiWriter := io.MultiWriter(os.Stdout, logFile)
+	// log.SetOutput(multiWriter)
+
 	// rdb := db.ConsRedisDB()
 	rdb := db.ConsBatchedRedisDB()
 	handler := Handler(rdb)
