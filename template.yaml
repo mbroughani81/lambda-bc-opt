@@ -17,7 +17,7 @@ Resources:
     Metadata:
       BuildMethod: go1.x
     Properties:
-      CodeUri: lambda-bc-opt/handlers/visitorcounter
+      CodeUri: lambda-bc-opt/awslambdahandlers/visitorcounter
       Handler: bootstrap
       Runtime: provided.al2023
       Timeout: 20
