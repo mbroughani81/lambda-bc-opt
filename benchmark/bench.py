@@ -42,7 +42,7 @@ def convert_to_milliseconds(value, unit):
 
 # In[]:
 # Define the RPS values to test
-rps_values = [2,4,6,8,10,12]
+rps_values = [2,4,6,7,8,10]
 
 # Lists to store results
 latency_50th = []

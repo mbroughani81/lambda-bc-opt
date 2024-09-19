@@ -22,11 +22,9 @@ func Handler(rdb db.KeyValueStoreDB) func(context.Context, events.APIGatewayProx
 			}, nil
 		}
 
-		// Convert the current count to an integer, increment it
 		cnt, _ := strconv.Atoi(cntVal)
 		cnt++
 
-		// Update the "cnt" key in Redis
 		err = rdb.Set("cnt", strconv.Itoa(cnt))
 		if err != nil {
 			log.Printf("Error updating 'cnt' in Redis: %v", err)
@@ -47,8 +45,9 @@ func Handler(rdb db.KeyValueStoreDB) func(context.Context, events.APIGatewayProx
 
 
 func main() {
+	rdb := db.ConsMockRedisDB()
 	// rdb := db.ConsRedisDB()
-	rdb := db.ConsBatchedRedisDB()
+	// rdb := db.ConsBatchedRedisDB()
 	handler := Handler(rdb)
 	lambda.Start(handler)
 }
