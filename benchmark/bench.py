@@ -11,6 +11,16 @@ def run_wrk(rps, duration=30):
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     return result.stdout
 
+# In[]:
+# Openwhisk run wrk
+# Function to run wrk and get the output
+def run_wrk(rps, duration=30):
+    """Run wrk2 for a specific RPS and return the latency data."""
+    command = f"wrk -t3 -c6 -d{duration}s -R{rps} --latency -s visitorcounter_request_openwhisk.lua http://10.10.0.1:3233"
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    return result.stdout
+
+# In[]:
 # Function to extract latency percentiles from wrk output
 def parse_latency_output(output):
     """Extract 50th, 90th, and 99th percentile latencies from wrk output."""
@@ -42,7 +52,7 @@ def convert_to_milliseconds(value, unit):
 
 # In[]:
 # Define the RPS values to test
-rps_values = [2,4,6,7,8,10]
+rps_values = [1]
 
 # Lists to store results
 latency_50th = []
