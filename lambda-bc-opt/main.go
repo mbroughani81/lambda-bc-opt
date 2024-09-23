@@ -10,7 +10,12 @@ import (
 
 func Main(args map[string]interface{}) map[string]interface{} {
 	rdb := db.ConsMockRedisDB()
-	cntVal, err := rdb.Get("cnt")
+
+	var cntVal string = ""
+	var err error = nil
+	for i := 0; i < 100; i++ {
+		cntVal, err = rdb.Get("cnt")
+	}
 
 	if err != nil {
 		return map[string]interface{}{
