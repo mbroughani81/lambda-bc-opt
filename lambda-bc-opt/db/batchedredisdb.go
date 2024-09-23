@@ -133,7 +133,7 @@ func (rdb *BatchedRedisDB) Set(k string, v string) error {
 }
 
 func ConsBatchedRedisDB() *BatchedRedisDB {
-	rc := initRedis()
+	rc := InitRedis()
 	rdb := BatchedRedisDB{rc: rc}
 
 	go func(rdb *BatchedRedisDB) {

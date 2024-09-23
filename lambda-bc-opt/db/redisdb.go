@@ -7,7 +7,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func initRedis() *redis.Client {
+func InitRedis() *redis.Client {
 	return redis.NewClient(&redis.Options{
 		Addr: "10.10.0.1:6379", // Change this to your Redis server address
 		DB:   0,                // Default DB number
@@ -39,6 +39,6 @@ func (rdb *RedisDB) Set(k string, v string) error {
 }
 
 func ConsRedisDB() *RedisDB {
-	rc := initRedis()
+	rc := InitRedis()
 	return &RedisDB{rc: rc}
 }
