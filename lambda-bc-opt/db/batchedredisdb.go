@@ -17,12 +17,12 @@ type BatchedRedisDB struct {
 type Op interface{}
 
 type GetOp struct {
-	K string
+	K string `json:"k"`
 }
 
 type SetOp struct {
-	K string
-	V string
+	K string `json:"k"`
+	V string `json:"v"`
 }
 
 type BatchOp struct {
