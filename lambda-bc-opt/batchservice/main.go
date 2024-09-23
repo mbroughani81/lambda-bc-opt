@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"io"
 	"lambda-bc-opt/db"
 	"log"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type BatchedRedisDB struct {
@@ -35,12 +36,15 @@ type BatchOp struct {
 }
 
 var batch []BatchOp
-var batchSize = 100
-var loopInterval = 2000 * time.Millisecond
+var batchSize = 5
+var loopInterval = 20 * time.Millisecond
+var isRunning bool = false
 
 var mu sync.Mutex
 
 func ExecBatch(rdb *BatchedRedisDB) {
+	isRunning = true
+
 	ctx := context.Background()
 	var redisResponses []redis.Cmder
 	// do the operations in pipleline
@@ -59,8 +63,10 @@ func ExecBatch(rdb *BatchedRedisDB) {
 		}
 	}
 	// executing the pipeline
-	log.Printf("Executing the pipeline => %#v", batch)
-	log.Printf("size of batch => %d", len(batch))
+	if len(batch) > 0 {
+		log.Printf("Executing the pipeline => %#v", batch)
+		log.Printf("size of batch => %d", len(batch))
+	}
 	_, err := pipe.Exec(ctx)
 	if err != nil && err != redis.Nil {
 		log.Fatalf("Executing the pipeline failed! => %v", err)
@@ -89,6 +95,8 @@ func ExecBatch(rdb *BatchedRedisDB) {
 			log.Fatalln("Unknown operation type")
 		}
 	}
+
+	isRunning = false
 }
 
 func AppendToBatch(rdb *BatchedRedisDB, op Op, ch chan string) {
@@ -157,12 +165,14 @@ func main() {
 	rc := db.InitRedis()
 	rdb := BatchedRedisDB{rc: rc}
 	go func(rdb *BatchedRedisDB) {
-		for now := range time.Tick(loopInterval) {
-			mu.Lock()
-			ExecBatch(rdb)
-			batch = nil
-			log.Printf("Executing batch => %s", now)
-			mu.Unlock()
+		for range time.Tick(loopInterval) {
+			if !isRunning && len(batch) > 0 {
+				mu.Lock()
+				ExecBatch(rdb)
+				batch = nil
+				// log.Printf("Executing batch => %s", now)
+				mu.Unlock()
+			}
 		}
 	}(&rdb)
 	// API

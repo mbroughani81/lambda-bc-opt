@@ -9,7 +9,7 @@ import (
 )
 
 func Main(args map[string]interface{}) map[string]interface{} {
-	rdb := db.ConsMockRedisDB()
+	rdb := db.ConsBatchedRedisDBV2("10.10.0.1:8080")
 
 	var cntVal string = ""
 	var err error = nil
