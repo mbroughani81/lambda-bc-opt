@@ -9,7 +9,7 @@ import (
 )
 
 func Main(args map[string]interface{}) map[string]interface{} {
-	rdb := db.ConsRedisDB()
+	rdb := db.ConsMockRedisDB()
 	cntVal, err := rdb.Get("cnt")
 
 	if err != nil {

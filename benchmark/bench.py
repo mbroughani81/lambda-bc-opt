@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 # Function to run wrk and get the output
 def run_wrk(rps, duration=30):
     """Run wrk2 for a specific RPS and return the latency data."""
-    command = f"wrk -t10 -c20 -d{duration}s -R{rps} --latency -s visitorcounter_request.lua http://127.0.0.1:3001/visitorCounter"
+    command = f"wrk -t10 -c15 -d{duration}s -R{rps} --latency -s visitorcounter_request.lua http://127.0.0.1:3001/visitorCounter"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     return result.stdout
 
@@ -16,7 +16,7 @@ def run_wrk(rps, duration=30):
 # Function to run wrk and get the output
 def run_wrk(rps, duration=30):
     """Run wrk2 for a specific RPS and return the latency data."""
-    command = f"wrk -t3 -c6 -d{duration}s -R{rps} --latency -s visitorcounter_request_openwhisk.lua http://10.10.0.1:3233"
+    command = f"wrk -t10 -c15 -d{duration}s -R{rps} --latency -s visitorcounter_request_openwhisk.lua http://10.10.0.1:3233"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     return result.stdout
 
@@ -52,7 +52,7 @@ def convert_to_milliseconds(value, unit):
 
 # In[]:
 # Define the RPS values to test
-rps_values = [1]
+rps_values = [40,80,120]
 
 # Lists to store results
 latency_50th = []
