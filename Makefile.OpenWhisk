@@ -18,13 +18,29 @@
 OW_USER?=openwhisk
 OW_VER?=v1.23:nightly
 OW_COMPILER?=$(OW_USER)/action-golang-$(OW_VER)
-MAIN=main
-SRCZIP=lambda-bc-opt.zip
 
-devel: $(SRCZIP)
-	wsk action update visitor-counter $(SRCZIP) --main $(MAIN) --docker $(OW_COMPILER) --memory 512
+HANDLERS_DIR=lambda-bc-opt/handlers/wsk
+ZIP_DIR=lambda-bc-opt
 
-$(SRCZIP):
-	(cd lambda-bc-opt && zip -r ../$@ .)
+.PHONY: devel clean $(ZIP_DIR)
 
-.PHONY: devel
+# Create an action for each subfolder in $(HANDLERS_DIR)
+devel: $(HANDLERS_DIR)
+	for dir in $(HANDLERS_DIR)/*/; do \
+		zip_name=$(ZIP_DIR)/$$(basename $$dir).zip; \
+		echo $$zip_name; \
+		rm -rf $(ZIP_DIR); \
+		mkdir -p $(ZIP_DIR); \
+		cp $$dir/main.go $(ZIP_DIR); \
+		(cd $(ZIP_DIR) && zip -r $$zip_name .); \
+	done
+
+# Copy the main.go file from the subfolder and zip it
+zip:
+	rm -rf $(ZIP_DIR)
+	mkdir -p $(ZIP_DIR)
+	cp $(DIR)/main.go $(ZIP_DIR)
+	(cd $(ZIP_DIR) && zip -r ../$(SRCZIP) .)
+
+clean:
+	rm -rf $(ZIP_DIR)
