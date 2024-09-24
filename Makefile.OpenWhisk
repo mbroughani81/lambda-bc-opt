@@ -20,20 +20,26 @@ OW_VER?=v1.23:nightly
 OW_COMPILER?=$(OW_USER)/action-golang-$(OW_VER)
 
 HANDLERS_DIR=lambda-bc-opt/handlers/wsk
-ZIP_DIR=lambda-bc-opt
+ZIP_DIR=zipzip
 
 .PHONY: devel clean $(ZIP_DIR)
 
 # Create an action for each subfolder in $(HANDLERS_DIR)
-devel: $(HANDLERS_DIR)
+devel:
+	rm -rf $(ZIP_DIR); \
 	for dir in $(HANDLERS_DIR)/*/; do \
-		zip_name=$(ZIP_DIR)/$$(basename $$dir).zip; \
+		zip_name=$$(basename $$dir).zip; \
+		action_name=$$(basename $$dir); \
 		echo $$zip_name; \
 		rm -rf $(ZIP_DIR); \
 		mkdir -p $(ZIP_DIR); \
 		cp $$dir/main.go $(ZIP_DIR); \
-		(cd $(ZIP_DIR) && zip -r $$zip_name .); \
-	done
+		cp -r lambda-bc-opt/* $(ZIP_DIR); \
+		(cd $(ZIP_DIR) && zip -r $$zip_name . && \
+		wsk action update $$action_name $$zip_name --main main --docker $(OW_COMPILER) --memory 512; \
+		); \
+	done; \
+	rm -rf $(ZIP_DIR);
 
 # Copy the main.go file from the subfolder and zip it
 zip:
