@@ -5,18 +5,18 @@ import matplotlib.pyplot as plt
 
 # In[]:
 # Function to run wrk and get the output
-def run_wrk(rps, duration=30):
-    """Run wrk2 for a specific RPS and return the latency data."""
-    command = f"wrk -t10 -c15 -d{duration}s -R{rps} --latency -s visitorcounter_request.lua http://127.0.0.1:3001/visitorCounter"
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    return result.stdout
+# def run_wrk(rps, duration=30):
+#     """Run wrk2 for a specific RPS and return the latency data."""
+#     command = f"wrk -t10 -c15 -d{duration}s -R{rps} --latency -s visitorcounter_request.lua http://127.0.0.1:3001/visitorCounter"
+#     result = subprocess.run(command, shell=True, capture_output=True, text=True)
+#     return result.stdout
 
 # In[]:
 # Openwhisk run wrk
 # Function to run wrk and get the output
-def run_wrk(rps, duration=30):
+def run_wrk(rps, action_url, duration):
     """Run wrk2 for a specific RPS and return the latency data."""
-    command = f"wrk -t10 -c15 -d{duration}s -R{rps} --latency -s visitorcounter_request_openwhisk.lua http://10.10.0.1:3233"
+    command = f"wrk -t10 -c15 -d{duration}s -R{rps} --latency -s visitorcounter_request_openwhisk.lua {action_url}"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     return result.stdout
 
@@ -50,19 +50,33 @@ def convert_to_milliseconds(value, unit):
         return value / 1000
     return value
 
-# In[]:
-# Define the RPS values to test
-rps_values = [20, 40, 60, 80, 100, 120]
+def plot(rps_values, latency_50th, latency_90th, latency_99th, name):
+    plt.figure(figsize=(10, 6))
+    plt.plot(rps_values, latency_50th, marker='o', label='50th Percentile')
+    plt.plot(rps_values, latency_90th, marker='o', label='90th Percentile')
+    plt.plot(rps_values, latency_99th, marker='o', label='99th Percentile')
 
-# Lists to store results
+    plt.xlabel('Requests per Second (RPS)')
+    plt.ylabel('Latency (ms)')
+    plt.title('Latency Percentiles vs RPS')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(name + ".png")
+
+
+# In[]:
+# gencnt1
+url = "http://10.10.0.1:3233/api/v1/namespaces/_/actions/gencnt1?blocking=true&result=true"
+## warming
+# run_wrk(1, url, duration=20)
+## warming done
 latency_50th = []
 latency_90th = []
 latency_99th = []
-
-# Loop through different RPS values, run wrk, and collect latencies
+rps_values = [20, 40, 60, 80, 100, 120, 140]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
-    output = run_wrk(rps)
+    output = run_wrk(rps, url, 30)
     latencies = parse_latency_output(output)
     print(f"laaatt => {output}")
     print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
@@ -72,19 +86,31 @@ for rps in rps_values:
     latency_50th.append(latencies.get('50th', None))
     latency_90th.append(latencies.get('90th', None))
     latency_99th.append(latencies.get('99th', None))
+plot(rps_values, latency_50th, latency_90th, latency_99th, "gencnt1")
+
 
 # In[]:
-# Plot the latency percentiles
-plt.figure(figsize=(10, 6))
-plt.plot(rps_values, latency_50th, marker='o', label='50th Percentile')
-plt.plot(rps_values, latency_90th, marker='o', label='90th Percentile')
-plt.plot(rps_values, latency_99th, marker='o', label='99th Percentile')
-
-plt.xlabel('Requests per Second (RPS)')
-plt.ylabel('Latency (ms)')
-plt.title('Latency Percentiles vs RPS')
-plt.legend()
-plt.grid(True)
-plt.savefig('latency_plot.png')
+# gencnt2
+url = "http://10.10.0.1:3233/api/v1/namespaces/_/actions/gencnt2?blocking=true&result=true"
+## warming
+# run_wrk(1, url, duration=20)
+## warming done
+latency_50th = []
+latency_90th = []
+latency_99th = []
+rps_values = [20, 40, 60, 80, 100, 120, 140]
+for rps in rps_values:
+    print(f"Running wrk2 for {rps} requests per second...")
+    output = run_wrk(rps, url, 30)
+    latencies = parse_latency_output(output)
+    print(f"laaatt => {output}")
+    print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
+    print(f"90th percentile: {latencies.get('90th', 'N/A')} ms")
+    print(f"99th percentile: {latencies.get('99th', 'N/A')} ms")
+    # Append the results
+    latency_50th.append(latencies.get('50th', None))
+    latency_90th.append(latencies.get('90th', None))
+    latency_99th.append(latencies.get('99th', None))
+plot(rps_values, latency_50th, latency_90th, latency_99th, "gencnt2")
 
 # %%

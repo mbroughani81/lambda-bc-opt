@@ -10,7 +10,7 @@ wrk.headers["Authorization"] = "Basic " .. auth
 request = function()
    print(wrk.url)
    io.flush()
-   return wrk.format(nil, "/api/v1/namespaces/_/actions/visitor-counter?blocking=true&result=true")
+   return wrk.format(nil)
 end
 
 response = function(status, headers, body)
