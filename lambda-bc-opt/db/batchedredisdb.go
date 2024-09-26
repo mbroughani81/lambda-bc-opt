@@ -33,7 +33,7 @@ type BatchOp struct {
 }
 
 var batch []BatchOp
-var batchSize = 10
+var batchSize = 100
 var loopInterval = 20 * time.Millisecond
 
 var mu sync.Mutex

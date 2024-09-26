@@ -107,7 +107,7 @@ url = "http://localhost:8080/getter"
 latency_50th = []
 latency_90th = []
 latency_99th = []
-rps_values = [200,300,400,500,600,700]
+rps_values = [200,300,400,500,600,700,800,900]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
     output = run_wrk(rps, url, 30)
@@ -131,7 +131,7 @@ url = "http://localhost:8080/getter"
 latency_50th = []
 latency_90th = []
 latency_99th = []
-rps_values = [2000,3000,4000,5000,6000,7000]
+rps_values = [2000,3000,4000,5000,6000,7000,8000,9000]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
     output = run_wrk(rps, url, 30)
@@ -147,6 +147,30 @@ for rps in rps_values:
     latency_99th.append(latencies.get('99th', None))
 export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "getter-2-final-10x.csv")
 plot(rps_values, latency_50th, latency_90th, latency_99th, "getter-2-final-10x.png")
+
+# In[]:
+# batched
+url = "http://localhost:8080/getter"
+## warming done
+latency_50th = []
+latency_90th = []
+latency_99th = []
+rps_values = [20000,30000,40000,50000,60000,70000,80000,90000]
+for rps in rps_values:
+    print(f"Running wrk2 for {rps} requests per second...")
+    output = run_wrk(rps, url, 30)
+    time.sleep(20)
+    latencies = parse_latency_output(output)
+    print(f"laaatt => {output}")
+    print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
+    print(f"90th percentile: {latencies.get('90th', 'N/A')} ms")
+    print(f"99th percentile: {latencies.get('99th', 'N/A')} ms")
+    # Append the results
+    latency_50th.append(latencies.get('50th', None))
+    latency_90th.append(latencies.get('90th', None))
+    latency_99th.append(latencies.get('99th', None))
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "getter-2-final-100x.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "getter-2-final-100x.png")
 
 
 
