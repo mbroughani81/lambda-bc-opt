@@ -2,7 +2,9 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"net"
 	"sync"
 	"time"
 
@@ -31,10 +33,28 @@ type BatchOp struct {
 }
 
 var batch []BatchOp
-var batchSize = 100
-var loopInterval = 200 * time.Millisecond
+var batchSize = 10
+var loopInterval = 20 * time.Millisecond
 
 var mu sync.Mutex
+
+func execPipeline(rdb *BatchedRedisDB, ctx context.Context, pipe redis.Pipeliner) error {
+	for retries := 0; retries < 3; retries++ {
+		_, err := pipe.Exec(ctx)
+		if err == nil {
+			// Pipeline executed successfully
+			return nil
+		} else if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+			log.Printf("Pipeline operation timed out. Retrying... attempt %d", retries+1)
+		} else if err != nil && err != redis.Nil {
+			log.Printf("Pipeline failed with error: %v. Retrying... attempt %d", err, retries+1)
+		}
+
+		// Retry with a delay
+		time.Sleep(2 * time.Second)
+	}
+	return fmt.Errorf("pipeline execution failed after 3 retries")
+}
 
 func ExecBatch(rdb *BatchedRedisDB) {
 	ctx := context.Background()
@@ -55,15 +75,18 @@ func ExecBatch(rdb *BatchedRedisDB) {
 		}
 	}
 	// executing the pipeline
-	log.Printf("Executing the pipeline => %#v", batch)
-	log.Printf("size of batch => %d", len(batch))
-	_, err := pipe.Exec(ctx)
-	if err != nil && err != redis.Nil {
-		log.Fatalf("Executing the pipeline failed! => %v", err)
+	if len(batch) > 0 {
+		log.Printf("Executing the pipeline => %#v", batch)
+		log.Printf("size of batch => %d", len(batch))
 	}
-	if err == redis.Nil {
-		log.Printf("REDIS IS NIL (some of the keys are not found)")
-	}
+	execPipeline(rdb, ctx, pipe)
+	// _, err := pipe.Exec(ctx)
+	// if err != nil && err != redis.Nil {
+	//	log.Fatalf("Executing the pipeline failed! => %v", err)
+	// }
+	// if err == redis.Nil {
+	//	log.Printf("REDIS IS NIL (some of the keys are not found)")
+	// }
 	for index, resp := range redisResponses {
 		log.Printf("redis-responses => %s\n", resp.String())
 		op := batch[index].op
@@ -137,11 +160,10 @@ func ConsBatchedRedisDB() *BatchedRedisDB {
 	rdb := BatchedRedisDB{rc: rc}
 
 	go func(rdb *BatchedRedisDB) {
-		for now := range time.Tick(loopInterval) {
+		for range time.Tick(loopInterval) {
 			mu.Lock()
 			ExecBatch(rdb)
 			batch = nil
-			log.Printf("Executing batch => %s", now)
 			mu.Unlock()
 		}
 	}(&rdb)

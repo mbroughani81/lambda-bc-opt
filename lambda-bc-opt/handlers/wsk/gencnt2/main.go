@@ -11,7 +11,7 @@ func Main(args map[string]interface{}) map[string]interface{} {
 	log.Println("gooz2")
 
 	// Set the number of goroutines you're going to wait for
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 100; i++ {
 		rdb.Get("cnt")
 	}
 

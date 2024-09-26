@@ -1,28 +1,26 @@
 package main
 
 import (
-	"log"
-	"sync"
-
 	"lambda-bc-opt/db"
+	"log"
 )
 
 func Main(args map[string]interface{}) map[string]interface{} {
 	rdb := db.ConsRedisDB()
 	log.Println("gooz1")
 
-	var wg sync.WaitGroup
-
 	// Set the number of goroutines you're going to wait for
-	n := 10
-	wg.Add(10)
+	n := 100
+	cc := make(chan int, n)
 	for i := 0; i < n; i++ {
 		go func() {
 			rdb.Get("cnt")
-			wg.Done()
+			cc <- 1
 		}()
 	}
-	wg.Wait()
+	for i := 0; i < n; i++ {
+		_ = <-cc
+	}
 
 	return map[string]interface{}{
 		"statusCode": 200,

@@ -2,6 +2,8 @@
 import subprocess
 import re
 import matplotlib.pyplot as plt
+import time
+import csv
 
 # In[]:
 # Function to run wrk and get the output
@@ -14,11 +16,21 @@ import matplotlib.pyplot as plt
 # In[]:
 # Openwhisk run wrk
 # Function to run wrk and get the output
-def run_wrk(rps, action_url, duration):
+def run_wrk_wsk(rps, action_url, duration):
     """Run wrk2 for a specific RPS and return the latency data."""
     command = f"wrk -t10 -c15 -d{duration}s -R{rps} --latency -s visitorcounter_request_openwhisk.lua {action_url}"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     return result.stdout
+
+# In[]:
+# run wrk
+# Function to run wrk and get the output
+def run_wrk(rps, action_url, duration):
+    """Run wrk2 for a specific RPS and return the latency data."""
+    command = f"wrk -t10 -c15 -d{duration}s -R{rps} --latency {action_url}"
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    return result.stdout
+
 
 # In[]:
 # Function to extract latency percentiles from wrk output
@@ -61,7 +73,81 @@ def plot(rps_values, latency_50th, latency_90th, latency_99th, name):
     plt.title('Latency Percentiles vs RPS')
     plt.legend()
     plt.grid(True)
-    plt.savefig(name + ".png")
+    plt.savefig(name)
+
+def export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, filename):
+    """Export RPS and latency data to a CSV file."""
+    headers = ['RPS', '50th Percentile Latency (ms)', '90th Percentile Latency (ms)', '99th Percentile Latency (ms)']
+    with open(filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(headers)
+        for rps, lat_50, lat_90, lat_99 in zip(rps_values, latency_50th, latency_90th, latency_99th):
+            writer.writerow([rps, lat_50, lat_90, lat_99])
+    print(f"Data successfully exported to {filename}")
+
+def read_from_csv(filename):
+    """Read the CSV file and return RPS values and latency percentiles."""
+    rps_values = []
+    latency_50th = []
+    latency_90th = []
+    latency_99th = []
+    with open(filename, mode='r') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            rps_values.append(int(row['RPS']))
+            latency_50th.append(float(row['50th Percentile Latency (ms)']))
+            latency_90th.append(float(row['90th Percentile Latency (ms)']))
+            latency_99th.append(float(row['99th Percentile Latency (ms)']))
+    return rps_values, latency_50th, latency_90th, latency_99th
+
+# In[]:
+# batched
+url = "http://localhost:8080/getter"
+## warming done
+latency_50th = []
+latency_90th = []
+latency_99th = []
+rps_values = [200,300,400,500,600,700]
+for rps in rps_values:
+    print(f"Running wrk2 for {rps} requests per second...")
+    output = run_wrk(rps, url, 30)
+    time.sleep(20)
+    latencies = parse_latency_output(output)
+    print(f"laaatt => {output}")
+    print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
+    print(f"90th percentile: {latencies.get('90th', 'N/A')} ms")
+    print(f"99th percentile: {latencies.get('99th', 'N/A')} ms")
+    # Append the results
+    latency_50th.append(latencies.get('50th', None))
+    latency_90th.append(latencies.get('90th', None))
+    latency_99th.append(latencies.get('99th', None))
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "getter-1-final.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "getter-1-final.png")
+
+# In[]:
+# batched
+url = "http://localhost:8080/getter"
+## warming done
+latency_50th = []
+latency_90th = []
+latency_99th = []
+rps_values = [2000,3000,4000,5000,6000,7000]
+for rps in rps_values:
+    print(f"Running wrk2 for {rps} requests per second...")
+    output = run_wrk(rps, url, 30)
+    time.sleep(20)
+    latencies = parse_latency_output(output)
+    print(f"laaatt => {output}")
+    print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
+    print(f"90th percentile: {latencies.get('90th', 'N/A')} ms")
+    print(f"99th percentile: {latencies.get('99th', 'N/A')} ms")
+    # Append the results
+    latency_50th.append(latencies.get('50th', None))
+    latency_90th.append(latencies.get('90th', None))
+    latency_99th.append(latencies.get('99th', None))
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "getter-2-final-10x.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "getter-2-final-10x.png")
+
 
 
 # In[]:
@@ -77,6 +163,7 @@ rps_values = [20, 40, 60, 80, 100, 120, 140]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
     output = run_wrk(rps, url, 30)
+    time.sleep(20)
     latencies = parse_latency_output(output)
     print(f"laaatt => {output}")
     print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
@@ -102,6 +189,7 @@ rps_values = [20, 40, 60, 80, 100, 120, 140]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
     output = run_wrk(rps, url, 30)
+    time.sleep(20)
     latencies = parse_latency_output(output)
     print(f"laaatt => {output}")
     print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")

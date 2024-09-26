@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"log"
+	// "time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -11,6 +12,10 @@ func InitRedis() *redis.Client {
 	return redis.NewClient(&redis.Options{
 		Addr: "10.10.0.1:6379", // Change this to your Redis server address
 		DB:   0,                // Default DB number
+		// DialTimeout:  10 * time.Second,
+		// ReadTimeout:  10 * time.Second,
+		// MinIdleConns: 10,
+		// PoolSize:     300,
 	})
 }
 
