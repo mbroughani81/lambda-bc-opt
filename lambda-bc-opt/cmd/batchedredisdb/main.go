@@ -5,29 +5,36 @@ import (
 	"log"
 	"runtime"
 	"sync"
+	"time"
 )
 
 func main() {
 	batchedRedisDB := db.ConsBatchedRedisDB()
+	// db.ConsBatchedRedisDB()
+
+	// batchedRedisDB := db.ConsRedisDB()
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 
 	println(runtime.GOMAXPROCS(0))
 
 	go func() {
-		batchedRedisDB.Set("g1", "value1")
-		result, _ := batchedRedisDB.Get("g1")
-		log.Println("#1 value1 => %s", result)
+		result := batchedRedisDB.Set("g1", "value1")
+		log.Printf("result1 %e", result)
 		wg.Done()
 	}()
 
 	go func() {
 		result, _ := batchedRedisDB.Get("g2")
-		log.Println("#2 => %s", result)
-		batchedRedisDB.Set("g2", "value2")
-		result, _ = batchedRedisDB.Get("g2")
-		log.Println("#2 value2 => %s", result)
+		log.Printf("result2 %s", result)
 		wg.Done()
 	}()
+
+	go func() {
+		log.Println("DONE")
+		time.Sleep(20 * time.Second)
+		wg.Done()
+	}()
+
 	wg.Wait()
 }

@@ -15,7 +15,7 @@ func InitRedis() *redis.Client {
 		// DialTimeout:  10 * time.Second,
 		// ReadTimeout:  10 * time.Second,
 		// MinIdleConns: 10,
-		// PoolSize:     300,
+		PoolSize: 1000,
 	})
 }
 

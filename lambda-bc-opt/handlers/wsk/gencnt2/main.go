@@ -1,23 +1,26 @@
 package main
 
 import (
-	"log"
-
 	"lambda-bc-opt/db"
 )
 
-func Main(args map[string]interface{}) map[string]interface{} {
-	rdb := db.ConsRedisDB()
-	log.Println("gooz2")
+var rdb db.KeyValueStoreDB = db.ConsBatchedRedisDB()
 
-	// Set the number of goroutines you're going to wait for
-	for i := 0; i < 100; i++ {
-		rdb.Get("cnt")
+func Main(args map[string]interface{}) map[string]interface{} {
+	n := 100
+	cc := make(chan int, n)
+	for i := 0; i < n; i++ {
+		go func() {
+			rdb.Get("cnt")
+			cc <- 1
+		}()
+	}
+	for i := 0; i < n; i++ {
+		<-cc
 	}
 
 	return map[string]interface{}{
 		"statusCode": 200,
 		"body":       "salam",
 	}
-
 }

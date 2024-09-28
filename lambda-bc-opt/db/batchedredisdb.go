@@ -32,11 +32,18 @@ type BatchOp struct {
 	ch chan string
 }
 
-var batch []BatchOp
+type BatchResponse struct {
+	redisResponse redis.Cmder
+	batchOp       BatchOp
+}
+
+var batch chan BatchOp
 var batchSize = 100
-var loopInterval = 20 * time.Millisecond
+var loopInterval = 100 * time.Millisecond
 
 var mu sync.Mutex
+
+var lastExec time.Time
 
 func execPipeline(rdb *BatchedRedisDB, ctx context.Context, pipe redis.Pipeliner) error {
 	for retries := 0; retries < 3; retries++ {
@@ -58,83 +65,95 @@ func execPipeline(rdb *BatchedRedisDB, ctx context.Context, pipe redis.Pipeliner
 
 func ExecBatch(rdb *BatchedRedisDB) {
 	ctx := context.Background()
-	var redisResponses []redis.Cmder
+	batchResponses := make(chan BatchResponse, batchSize)
 	// do the operations in pipleline
 	pipe := rdb.rc.Pipeline()
-	for _, x := range batch {
-		cur_op := x.op
-		switch v := cur_op.(type) {
-		case GetOp:
-			result := pipe.Get(ctx, v.K)
-			redisResponses = append(redisResponses, result)
-		case SetOp:
-			result := pipe.Set(ctx, v.K, v.V, 0)
-			redisResponses = append(redisResponses, result)
+	processedCount := 0
+	for i := 0; i < batchSize; i++ {
+		select {
+		case cur_op := <-batch:
+			{
+				processedCount++
+				switch v := cur_op.op.(type) {
+				case GetOp:
+					result := pipe.Get(ctx, v.K)
+					batchResponses <- BatchResponse{
+						redisResponse: result,
+						batchOp:       cur_op}
+				case SetOp:
+					result := pipe.Set(ctx, v.K, v.V, 0)
+					batchResponses <- BatchResponse{
+						redisResponse: result,
+						batchOp:       cur_op}
+				default:
+					log.Fatalln("Unknown operation type")
+				}
+			}
 		default:
-			log.Fatalln("Unknown operation type")
+			break
 		}
 	}
 	// executing the pipeline
-	if len(batch) > 0 {
-		log.Printf("Executing the pipeline => %#v", batch)
-		log.Printf("size of batch => %d", len(batch))
+	if processedCount > 0 {
+		log.Printf(">> processedCount %d", processedCount)
+		log.Printf(">> batch size %d", len(batch))
 	}
 	execPipeline(rdb, ctx, pipe)
-	// _, err := pipe.Exec(ctx)
-	// if err != nil && err != redis.Nil {
-	//	log.Fatalf("Executing the pipeline failed! => %v", err)
-	// }
-	// if err == redis.Nil {
-	//	log.Printf("REDIS IS NIL (some of the keys are not found)")
-	// }
-	for index, resp := range redisResponses {
-		log.Printf("redis-responses => %s\n", resp.String())
-		op := batch[index].op
-		ch := batch[index].ch
-		switch op.(type) {
-		case GetOp:
-			if getResp, ok := resp.(*redis.StringCmd); ok {
-				ch <- getResp.Val()
-			} else {
-				ch <- "error"
-			}
-		case SetOp:
-			if setResp, ok := resp.(*redis.StatusCmd); ok {
-				ch <- setResp.Val()
-			} else {
-				ch <- "error"
+forLoop:
+	for {
+
+		select {
+		case response := <-batchResponses:
+			redisResponse := response.redisResponse
+			batchOp := response.batchOp
+			switch batchOp.op.(type) {
+			case GetOp:
+				if getResp, ok := redisResponse.(*redis.StringCmd); ok {
+					batchOp.ch <- getResp.Val()
+				} else {
+					batchOp.ch <- "error"
+				}
+			case SetOp:
+				if setResp, ok := redisResponse.(*redis.StatusCmd); ok {
+					batchOp.ch <- setResp.Val()
+				} else {
+					batchOp.ch <- "error"
+				}
 			}
 		default:
-			log.Fatalln("Unknown operation type")
+			break forLoop
 		}
+	}
+
+	if processedCount > 0 {
+		curExec := time.Now()
+		diff := curExec.Sub(lastExec)
+		log.Println("Time difference:", diff)
+		lastExec = curExec
 	}
 }
 
 func AppendToBatch(rdb *BatchedRedisDB, op Op, ch chan string) {
 	go func() {
 		// critical section! only one coroutine here
-		mu.Lock()
-		defer mu.Unlock()
-
 		switch v := op.(type) {
 		case GetOp:
 			log.Println("Appending GetOp:", v.K)
-			batch = append(batch, BatchOp{op, ch}) // Append the GetOp to the batch
+			batch <- BatchOp{op, ch}
 		case SetOp:
 			log.Println("Appending SetOp:", v.K, v.V)
-			batch = append(batch, BatchOp{op, ch}) // Append the SetOp to the batch
+			batch <- BatchOp{op, ch}
 		default:
 			log.Fatalln("Unknown operation type")
 		}
 		if len(batch) >= batchSize {
 			ExecBatch(rdb)
-			// delete the batch
-			batch = nil
+			log.Println("exec: BATCH FULL!")
 		}
 	}()
 }
 
-func GetBatch() []BatchOp {
+func GetBatch() chan BatchOp {
 	return batch
 }
 
@@ -146,6 +165,7 @@ func (rdb *BatchedRedisDB) Get(k string) (string, error) {
 	result := <-ch
 
 	return result, nil
+	// return "1", nil
 }
 func (rdb *BatchedRedisDB) Set(k string, v string) error {
 	op := SetOp{K: k, V: v}
@@ -158,13 +178,16 @@ func (rdb *BatchedRedisDB) Set(k string, v string) error {
 func ConsBatchedRedisDB() *BatchedRedisDB {
 	rc := InitRedis()
 	rdb := BatchedRedisDB{rc: rc}
+	batch = make(chan BatchOp, 100*batchSize)
 
 	go func(rdb *BatchedRedisDB) {
 		for range time.Tick(loopInterval) {
-			mu.Lock()
-			ExecBatch(rdb)
-			batch = nil
-			mu.Unlock()
+			if len(batch) > 0 {
+				log.Printf("loop: batch size => %d", len(batch))
+				log.Println("exec: TL reached!")
+				ExecBatch(rdb)
+			}
+			// batch = nil
 		}
 	}(&rdb)
 
