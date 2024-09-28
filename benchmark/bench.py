@@ -101,7 +101,7 @@ def read_from_csv(filename):
     return rps_values, latency_50th, latency_90th, latency_99th
 
 # In[]:
-# batched
+# Code-level batch call optimization
 url = "http://localhost:8080/getter"
 latency_50th = []
 latency_90th = []
