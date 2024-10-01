@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io"
+	// "io"
 	"log"
 	"net/http"
 	"sync"
@@ -27,8 +27,7 @@ func getterHandler(w http.ResponseWriter, r *http.Request) {
 	wg.Add(n)
 	for i := 0; i < n; i++ {
 		go func() {
-			result, _ := rdb.Get("cnt")
-			log.Printf("This is result => %s", result)
+			rdb.Get("cnt")
 			wg.Done()
 		}()
 	}
@@ -39,7 +38,7 @@ func getterHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	log.SetOutput(io.Discard)
+	// log.SetOutput(io.Discard)
 	http.HandleFunc("/getter", getterHandler)
 
 	// Start the HTTP server on port 8080

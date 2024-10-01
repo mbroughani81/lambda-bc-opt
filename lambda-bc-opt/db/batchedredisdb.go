@@ -39,13 +39,13 @@ type BatchResponse struct {
 
 var batch chan BatchOp
 var batchSize = 10
-var loopInterval = 100 * time.Millisecond
+var loopInterval = 10 * time.Millisecond
 
 var mu sync.Mutex
 
 var lastExec time.Time
 
-func execPipeline(rdb *BatchedRedisDB, ctx context.Context, pipe redis.Pipeliner) error {
+func execPipeline(ctx context.Context, pipe redis.Pipeliner) error {
 	for retries := 0; retries < 3; retries++ {
 		_, err := pipe.Exec(ctx)
 		if err == nil {
@@ -58,7 +58,7 @@ func execPipeline(rdb *BatchedRedisDB, ctx context.Context, pipe redis.Pipeliner
 		}
 
 		// Retry with a delay
-		time.Sleep(2 * time.Second)
+		time.Sleep(2 * time.Millisecond)
 	}
 	return fmt.Errorf("pipeline execution failed after 3 retries")
 }
@@ -97,8 +97,8 @@ func ExecBatch(rdb *BatchedRedisDB) {
 	if processedCount > 0 {
 		log.Printf(">> processedCount %d", processedCount)
 		log.Printf(">> batch size %d", len(batch))
+		execPipeline(ctx, pipe)
 	}
-	execPipeline(rdb, ctx, pipe)
 forLoop:
 	for {
 
@@ -134,23 +134,18 @@ forLoop:
 }
 
 func AppendToBatch(rdb *BatchedRedisDB, op Op, ch chan string) {
-	go func() {
-		// critical section! only one coroutine here
-		switch v := op.(type) {
-		case GetOp:
-			log.Println("Appending GetOp:", v.K)
-			batch <- BatchOp{op, ch}
-		case SetOp:
-			log.Println("Appending SetOp:", v.K, v.V)
-			batch <- BatchOp{op, ch}
-		default:
-			log.Fatalln("Unknown operation type")
-		}
-		if len(batch) >= batchSize {
-			ExecBatch(rdb)
-			log.Println("exec: BATCH FULL!")
-		}
-	}()
+	switch op.(type) {
+	case GetOp:
+		batch <- BatchOp{op, ch}
+	case SetOp:
+		batch <- BatchOp{op, ch}
+	default:
+		log.Fatalln("Unknown operation type")
+	}
+	if len(batch) >= batchSize {
+		ExecBatch(rdb)
+		log.Println("exec: BATCH FULL!")
+	}
 }
 
 func GetBatch() chan BatchOp {
@@ -161,16 +156,19 @@ func GetBatch() chan BatchOp {
 func (rdb *BatchedRedisDB) Get(k string) (string, error) {
 	op := GetOp{K: k}
 	ch := make(chan string)
-	AppendToBatch(rdb, op, ch)
+	go func() {
+		AppendToBatch(rdb, op, ch)
+	}()
 	result := <-ch
 
 	return result, nil
-	// return "1", nil
 }
 func (rdb *BatchedRedisDB) Set(k string, v string) error {
 	op := SetOp{K: k, V: v}
 	ch := make(chan string)
-	AppendToBatch(rdb, op, ch)
+	go func() {
+		AppendToBatch(rdb, op, ch)
+	}()
 	<-ch
 	return nil
 }
