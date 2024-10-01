@@ -1,141 +1,59 @@
-# sam-app
+# Lambda Batch-Call Optimization
 
-This is a sample template for sam-app - Below is a brief explanation of what we have generated for you:
+## Project Structure
 
-```bash
-.
-├── Makefile                    <-- Make to automate build
-├── README.md                   <-- This instructions file
-├── hello-world                 <-- Source code for a lambda function
-│   ├── main.go                 <-- Lambda function code
-│   └── main_test.go            <-- Unit tests
-└── template.yaml
-```
+### Handlers and Benchmarking
+- **lambda-bc-opt/handlers/wsk**: Contains handler functions written in Go that are executed on OpenWhisk. Each subdirectory represents a different function.
+- **benchmark**: Contains benchmarking scripts and related data, including Lua scripts for `wrk`, CSV files for benchmarking results, and Python scripts for running the tests and parsing the output.
 
-## Requirements
+### Important Scripts
 
-* AWS CLI already configured with Administrator permission
-* [Docker installed](https://www.docker.com/community-edition)
-* [Golang](https://golang.org)
-* SAM CLI - [Install the SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
+1. **bench.py**:
+   - This Python script orchestrates the benchmarking process. It runs the `wrk2` tool to simulate different request rates (RPS) against specific URLs (usually pointing to OpenWhisk functions or services).
+   - It collects latency percentiles (50th, 90th, and 99th) and exports the results into CSV files.
+   - The script also generates plots of latency percentiles against RPS and can read from CSV files to generate additional insights.
 
-## Setup process
+2. **visitorcounter_request.lua**:
+   - A Lua script used by `wrk2` to simulate requests against the `visitorCounter` service.
 
-### Installing dependencies & building the target 
+3. **Makefile**:
+   - The Makefile provides automation for packaging and deploying OpenWhisk actions.
+   - The `devel` target automates the creation of zip files for each handler in the `lambda-bc-opt/handlers/wsk` directory and updates the corresponding OpenWhisk actions using Docker-based Golang actions.
+   - The `zip` target creates individual zip files from handler subdirectories.
+   - The `clean` target cleans up the generated zip directories.
 
-In this example we use the built-in `sam build` to automatically download all the dependencies and package our build target.   
-Read more about [SAM Build here](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-cli-command-reference-sam-build.html) 
+### OpenWhisk Integration
 
-The `sam build` command is wrapped inside of the `Makefile`. To execute this simply run
- 
-```shell
-make
-```
+- **OpenWhisk Functions**: Each handler subdirectory under `lambda-bc-opt/handlers/wsk` represents an OpenWhisk action written in Go. These functions are zipped and deployed using the Makefile.
+- **OpenWhisk Compiler**: The OpenWhisk functions are compiled and deployed using a Docker image for Go actions, with memory settings of 1024MB by default.
 
-### Local development
+### Benchmarking
 
-**Invoking function locally through local API Gateway**
+- The `wrk2` tool is used to simulate requests at varying rates (RPS) and measure latency percentiles.
+- Latency data is collected and exported into CSV files, and graphs are generated to visualize the relationship between RPS and latency percentiles.
+- Different sets of tests are conducted for Redis (e.g., `redis-batched` and `redis-naive`) and OpenWhisk actions (e.g., `gencnt1` and `gencnt2`).
 
-```bash
-sam local start-api
-```
+## Dependencies
 
-If the previous command ran successfully you should now be able to hit the following local endpoint to invoke your function `http://localhost:3000/hello`
+- **wrk2**: A powerful HTTP benchmarking tool that supports constant request rates.
+- **Python**: The benchmarking script uses Python for running the tests, parsing outputs, generating plots, and exporting data.
+- **OpenWhisk**: An open-source serverless platform where the functions (handlers) are deployed.
 
-**SAM CLI** is used to emulate both Lambda and API Gateway locally and uses our `template.yaml` to understand how to bootstrap this environment (runtime, where the source code is, etc.) - The following excerpt is what the CLI will read in order to initialize an API and its routes:
+## How to Run the Project
 
-```yaml
-...
-Events:
-    HelloWorld:
-        Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
-        Properties:
-            Path: /hello
-            Method: get
-```
+1. Ensure you have all necessary dependencies installed (`wrk2`, Python, `zip`, OpenWhisk CLI, etc.).
+2. Use the `Makefile` to package and deploy the OpenWhisk actions.
+   ```bash
+   make devel
+   ```
+3. Run the benchmarking script `bench.py` to conduct tests and generate results.
+   ```bash
+   python3 benchmark/bench.py
+   ```
+4. Check the generated CSV files and plots for benchmarking results.
 
-## Packaging and deployment
+## License
+MIT License
 
-AWS Lambda Golang runtime requires a flat folder with the executable generated on build step. SAM will use `CodeUri` property to know where to look up for the application:
-
-```yaml
-...
-    FirstFunction:
-        Type: AWS::Serverless::Function
-        Properties:
-            CodeUri: hello_world/
-            ...
-```
-
-To deploy your application for the first time, run the following in your shell:
-
-```bash
-sam deploy --guided
-```
-
-The command will package and deploy your application to AWS, with a series of prompts:
-
-* **Stack Name**: The name of the stack to deploy to CloudFormation. This should be unique to your account and region, and a good starting point would be something matching your project name.
-* **AWS Region**: The AWS region you want to deploy your app to.
-* **Confirm changes before deploy**: If set to yes, any change sets will be shown to you before execution for manual review. If set to no, the AWS SAM CLI will automatically deploy application changes.
-* **Allow SAM CLI IAM role creation**: Many AWS SAM templates, including this example, create AWS IAM roles required for the AWS Lambda function(s) included to access AWS services. By default, these are scoped down to minimum required permissions. To deploy an AWS CloudFormation stack which creates or modifies IAM roles, the `CAPABILITY_IAM` value for `capabilities` must be provided. If permission isn't provided through this prompt, to deploy this example you must explicitly pass `--capabilities CAPABILITY_IAM` to the `sam deploy` command.
-* **Save arguments to samconfig.toml**: If set to yes, your choices will be saved to a configuration file inside the project, so that in the future you can just re-run `sam deploy` without parameters to deploy changes to your application.
-
-You can find your API Gateway Endpoint URL in the output values displayed after deployment.
-
-### Testing
-
-We use `testing` package that is built-in in Golang and you can simply run the following command to run our tests:
-
-```shell
-cd ./hello-world/
-go test -v .
-```
-# Appendix
-
-### Golang installation
-
-Please ensure Go 1.x (where 'x' is the latest version) is installed as per the instructions on the official golang website: https://golang.org/doc/install
-
-A quickstart way would be to use Homebrew, chocolatey or your linux package manager.
-
-#### Homebrew (Mac)
-
-Issue the following command from the terminal:
-
-```shell
-brew install golang
-```
-
-If it's already installed, run the following command to ensure it's the latest version:
-
-```shell
-brew update
-brew upgrade golang
-```
-
-#### Chocolatey (Windows)
-
-Issue the following command from the powershell:
-
-```shell
-choco install golang
-```
-
-If it's already installed, run the following command to ensure it's the latest version:
-
-```shell
-choco upgrade golang
-```
-
-## Bringing to the next level
-
-Here are a few ideas that you can use to get more acquainted as to how this overall process works:
-
-* Create an additional API resource (e.g. /hello/{proxy+}) and return the name requested through this new path
-* Update unit test to capture that
-* Package & Deploy
-
-Next, you can use the following resources to know more about beyond hello world samples and how others structure their Serverless applications:
-
-* [AWS Serverless Application Repository](https://aws.amazon.com/serverless/serverlessrepo/)
+## Authors
+[Your Name]
