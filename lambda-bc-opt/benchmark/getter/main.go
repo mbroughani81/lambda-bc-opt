@@ -9,11 +9,11 @@ import (
 	"lambda-bc-opt/db"
 )
 
-var rdb db.KeyValueStoreDB = db.ConsBatchedRedisDB()
-
 // var rdb db.KeyValueStoreDB = db.ConsMockRedisDB()
 
 // var rdb db.KeyValueStoreDB = db.ConsRedisDB()
+
+var rdb db.KeyValueStoreDB = db.ConsBatchedRedisDB()
 
 var counter int = 0
 
