@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"log"
 	"net/http"
 	"sync"
@@ -8,32 +9,37 @@ import (
 	"lambda-bc-opt/db"
 )
 
-// var rdb db.KeyValueStoreDB = db.ConsBatchedRedisDB()
+var rdb db.KeyValueStoreDB = db.ConsBatchedRedisDB()
 
 // var rdb db.KeyValueStoreDB = db.ConsMockRedisDB()
 
 // var rdb db.KeyValueStoreDB = db.ConsRedisDB()
 
+var counter int = 0
+
 func getterHandler(w http.ResponseWriter, r *http.Request) {
 	// Call the getter function
+	log.Printf("counter => %d", counter)
+	counter++
 	n := 100
+
 	var wg sync.WaitGroup
 	wg.Add(n)
 	for i := 0; i < n; i++ {
 		go func() {
-			log.Println("gooz1")
 			result, _ := rdb.Get("cnt")
 			log.Printf("This is result => %s", result)
 			wg.Done()
 		}()
 	}
 	wg.Wait()
+
+	log.Println("wg done")
 	// Send a response back to the client
-	// fmt.Fprintf(w, "Getter function executed successfully")
 }
 
 func main() {
-	// log.SetOutput(io.Discard)
+	log.SetOutput(io.Discard)
 	http.HandleFunc("/getter", getterHandler)
 
 	// Start the HTTP server on port 8080

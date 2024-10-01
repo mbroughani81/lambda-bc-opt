@@ -23,6 +23,10 @@ type RedisDB struct {
 	rc *redis.Client
 }
 
+func (rdb *RedisDB) Getrc() *redis.Client {
+	return rdb.rc
+}
+
 // KeyValueStoreDB
 func (rdb *RedisDB) Get(k string) (string, error) {
 	result, err := rdb.rc.Get(context.Background(), k).Result()

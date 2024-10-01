@@ -38,7 +38,7 @@ type BatchResponse struct {
 }
 
 var batch chan BatchOp
-var batchSize = 100
+var batchSize = 1000
 var loopInterval = 100 * time.Millisecond
 
 var mu sync.Mutex
@@ -180,16 +180,16 @@ func ConsBatchedRedisDB() *BatchedRedisDB {
 	rdb := BatchedRedisDB{rc: rc}
 	batch = make(chan BatchOp, 100*batchSize)
 
-	go func(rdb *BatchedRedisDB) {
-		for range time.Tick(loopInterval) {
-			if len(batch) > 0 {
-				log.Printf("loop: batch size => %d", len(batch))
-				log.Println("exec: TL reached!")
-				ExecBatch(rdb)
-			}
-			// batch = nil
-		}
-	}(&rdb)
+	// go func(rdb *BatchedRedisDB) {
+	//	for range time.Tick(loopInterval) {
+	//		if len(batch) > 0 {
+	//			log.Printf("loop: batch size => %d", len(batch))
+	//			log.Println("exec: TL reached!")
+	//			ExecBatch(rdb)
+	//		}
+	//		// batch = nil
+	//	}
+	// }(&rdb)
 
 	return &rdb
 }
