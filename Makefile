@@ -36,7 +36,7 @@ devel:
 		cp $$dir/main.go $(ZIP_DIR); \
 		cp -r lambda-bc-opt/* $(ZIP_DIR); \
 		(cd $(ZIP_DIR) && zip -r $$zip_name . && \
-		wsk action update $$action_name $$zip_name --main main --docker $(OW_COMPILER) --memory 1024; \
+		wsk action update $$action_name $$zip_name --main main --docker $(OW_COMPILER) --memory 512; \
 		); \
 	done; \
 	rm -rf $(ZIP_DIR);

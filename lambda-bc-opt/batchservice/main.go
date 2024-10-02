@@ -181,10 +181,8 @@ func getHandler(rdb *BatchedRedisDB) func(http.ResponseWriter, *http.Request) {
 		appendToBatch(rdb, getOp, ch)
 		result := <-ch
 
-		response := fmt.Sprintf("Value for key '%s'", result)
-
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(response))
+		w.Write([]byte(result))
 	}
 }
 
