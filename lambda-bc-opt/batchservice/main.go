@@ -7,6 +7,7 @@ import (
 	"io"
 	"lambda-bc-opt/db"
 	"log"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -18,7 +19,6 @@ type BatchedRedisDB struct {
 	rc *redis.Client
 }
 
-// todo: use generic operations
 type Op interface{}
 
 type GetOp struct {
@@ -35,92 +35,120 @@ type BatchOp struct {
 	ch chan string
 }
 
-var batch []BatchOp
-var batchSize = 5
-var loopInterval = 20 * time.Millisecond
-var isRunning bool = false
+type BatchResponse struct {
+	redisResponse redis.Cmder
+	batchOp       BatchOp
+}
+
+var batch chan BatchOp
+var batchSize = 10
+var loopInterval = 1000 * time.Millisecond
 
 var mu sync.Mutex
 
-func ExecBatch(rdb *BatchedRedisDB) {
-	isRunning = true
+var lastExec time.Time
 
+func execPipeline(ctx context.Context, pipe redis.Pipeliner) error {
+	for retries := 0; retries < 3; retries++ {
+		_, err := pipe.Exec(ctx)
+		if err == nil {
+			// Pipeline executed successfully
+			return nil
+		} else if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+			log.Printf("Pipeline operation timed out. Retrying... attempt %d", retries+1)
+		} else if err != nil && err != redis.Nil {
+			log.Printf("Pipeline failed with error: %v. Retrying... attempt %d", err, retries+1)
+		}
+
+		// Retry with a delay
+		time.Sleep(2 * time.Millisecond)
+	}
+	return fmt.Errorf("pipeline execution failed after 3 retries")
+}
+
+func execBatch(rdb *BatchedRedisDB) {
 	ctx := context.Background()
-	var redisResponses []redis.Cmder
+	batchResponses := make(chan BatchResponse, batchSize)
 	// do the operations in pipleline
 	pipe := rdb.rc.Pipeline()
-	for _, x := range batch {
-		cur_op := x.op
-		switch v := cur_op.(type) {
-		case GetOp:
-			result := pipe.Get(ctx, v.K)
-			redisResponses = append(redisResponses, result)
-		case SetOp:
-			result := pipe.Set(ctx, v.K, v.V, 0)
-			redisResponses = append(redisResponses, result)
+	processedCount := 0
+	for i := 0; i < batchSize; i++ {
+		select {
+		case cur_op := <-batch:
+			{
+				processedCount++
+				switch v := cur_op.op.(type) {
+				case GetOp:
+					result := pipe.Get(ctx, v.K)
+					batchResponses <- BatchResponse{
+						redisResponse: result,
+						batchOp:       cur_op}
+				case SetOp:
+					result := pipe.Set(ctx, v.K, v.V, 0)
+					batchResponses <- BatchResponse{
+						redisResponse: result,
+						batchOp:       cur_op}
+				default:
+					log.Fatalln("Unknown operation type")
+				}
+			}
 		default:
-			log.Fatalln("Unknown operation type")
+			break
 		}
 	}
 	// executing the pipeline
-	if len(batch) > 0 {
-		log.Printf("Executing the pipeline => %#v", batch)
-		log.Printf("size of batch => %d", len(batch))
+	if processedCount > 0 {
+		log.Printf(">> processedCount %d", processedCount)
+		log.Printf(">> batch size %d", len(batch))
+		execPipeline(ctx, pipe)
 	}
-	_, err := pipe.Exec(ctx)
-	if err != nil && err != redis.Nil {
-		log.Fatalf("Executing the pipeline failed! => %v", err)
-	}
-	if err == redis.Nil {
-		log.Printf("REDIS IS NIL (some of the keys are not found)")
-	}
-	for index, resp := range redisResponses {
-		log.Printf("redis-responses => %s\n", resp.String())
-		op := batch[index].op
-		ch := batch[index].ch
-		switch op.(type) {
-		case GetOp:
-			if getResp, ok := resp.(*redis.StringCmd); ok {
-				ch <- getResp.Val()
-			} else {
-				ch <- "error"
-			}
-		case SetOp:
-			if setResp, ok := resp.(*redis.StatusCmd); ok {
-				ch <- setResp.Val()
-			} else {
-				ch <- "error"
+forLoop:
+	for {
+
+		select {
+		case response := <-batchResponses:
+			redisResponse := response.redisResponse
+			batchOp := response.batchOp
+			switch batchOp.op.(type) {
+			case GetOp:
+				if getResp, ok := redisResponse.(*redis.StringCmd); ok {
+					batchOp.ch <- getResp.Val()
+				} else {
+					batchOp.ch <- "error"
+				}
+			case SetOp:
+				if setResp, ok := redisResponse.(*redis.StatusCmd); ok {
+					batchOp.ch <- setResp.Val()
+				} else {
+					batchOp.ch <- "error"
+				}
 			}
 		default:
-			log.Fatalln("Unknown operation type")
+			break forLoop
 		}
 	}
 
-	isRunning = false
+	if processedCount > 0 {
+		curExec := time.Now()
+		diff := curExec.Sub(lastExec)
+		log.Println("Time difference:", diff)
+		lastExec = curExec
+	}
 }
 
-func AppendToBatch(rdb *BatchedRedisDB, op Op, ch chan string) {
-	go func() {
-		// critical section! only one coroutine here
-		mu.Lock()
-		defer mu.Unlock()
-
-		switch v := op.(type) {
-		case GetOp:
-			log.Println("Appending GetOp:", v.K)
-			batch = append(batch, BatchOp{op, ch}) // Append the GetOp to the batch
-		case SetOp:
-			log.Println("Appending SetOp:", v.K, v.V)
-			batch = append(batch, BatchOp{op, ch}) // Append the SetOp to the batch
-		default:
-			log.Fatalln("Unknown operation type")
-		}
-		if len(batch) >= batchSize {
-			ExecBatch(rdb)
-			// delete the batch
-			batch = nil
-		}
-	}()
+func appendToBatch(rdb *BatchedRedisDB, op Op, ch chan string) {
+	switch op.(type) {
+	case GetOp:
+		batch <- BatchOp{op, ch}
+	case SetOp:
+		batch <- BatchOp{op, ch}
+	default:
+		log.Fatalln("Unknown operation type")
+	}
+	if len(batch) >= batchSize {
+		execBatch(rdb)
+		log.Println("exec: BATCH FULL!")
+	}
 }
 
 // ------------------------------------------------------------ //
@@ -150,7 +178,7 @@ func getHandler(rdb *BatchedRedisDB) func(http.ResponseWriter, *http.Request) {
 		fmt.Printf("Received key: %s\n", getOp.K)
 		// creating a BatchOp
 		ch := make(chan string)
-		AppendToBatch(rdb, getOp, ch)
+		appendToBatch(rdb, getOp, ch)
 		result := <-ch
 
 		response := fmt.Sprintf("Value for key '%s'", result)
@@ -164,17 +192,19 @@ func main() {
 	// DB
 	rc := db.InitRedis()
 	rdb := BatchedRedisDB{rc: rc}
+	batch = make(chan BatchOp, 100*batchSize)
+
 	go func(rdb *BatchedRedisDB) {
 		for range time.Tick(loopInterval) {
-			if !isRunning && len(batch) > 0 {
-				mu.Lock()
-				ExecBatch(rdb)
-				batch = nil
-				// log.Printf("Executing batch => %s", now)
-				mu.Unlock()
+			if len(batch) > 0 {
+				log.Printf("loop: batch size => %d", len(batch))
+				log.Println("exec: TL reached!")
+				execBatch(rdb)
 			}
+			// batch = nil
 		}
 	}(&rdb)
+
 	// API
 	http.HandleFunc("/get", getHandler(&rdb))
 	fmt.Println("Server listening on localhost:8080")
