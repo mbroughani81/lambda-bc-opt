@@ -63,7 +63,7 @@ func execPipeline(ctx context.Context, pipe redis.Pipeliner) error {
 	return fmt.Errorf("pipeline execution failed after 3 retries")
 }
 
-func ExecBatch(rdb *BatchedRedisDB) {
+func execBatch(rdb *BatchedRedisDB) {
 	ctx := context.Background()
 	batchResponses := make(chan BatchResponse, batchSize)
 	// do the operations in pipleline
@@ -133,7 +133,7 @@ forLoop:
 	}
 }
 
-func AppendToBatch(rdb *BatchedRedisDB, op Op, ch chan string) {
+func appendToBatch(rdb *BatchedRedisDB, op Op, ch chan string) {
 	switch op.(type) {
 	case GetOp:
 		batch <- BatchOp{op, ch}
@@ -143,7 +143,7 @@ func AppendToBatch(rdb *BatchedRedisDB, op Op, ch chan string) {
 		log.Fatalln("Unknown operation type")
 	}
 	if len(batch) >= batchSize {
-		ExecBatch(rdb)
+		execBatch(rdb)
 		log.Println("exec: BATCH FULL!")
 	}
 }
@@ -157,7 +157,7 @@ func (rdb *BatchedRedisDB) Get(k string) (string, error) {
 	op := GetOp{K: k}
 	ch := make(chan string)
 	go func() {
-		AppendToBatch(rdb, op, ch)
+		appendToBatch(rdb, op, ch)
 	}()
 	result := <-ch
 
@@ -167,7 +167,7 @@ func (rdb *BatchedRedisDB) Set(k string, v string) error {
 	op := SetOp{K: k, V: v}
 	ch := make(chan string)
 	go func() {
-		AppendToBatch(rdb, op, ch)
+		appendToBatch(rdb, op, ch)
 	}()
 	<-ch
 	return nil
@@ -183,7 +183,7 @@ func ConsBatchedRedisDB() *BatchedRedisDB {
 			if len(batch) > 0 {
 				log.Printf("loop: batch size => %d", len(batch))
 				log.Println("exec: TL reached!")
-				ExecBatch(rdb)
+				execBatch(rdb)
 			}
 			// batch = nil
 		}
