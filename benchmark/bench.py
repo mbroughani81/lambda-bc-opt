@@ -27,7 +27,7 @@ def run_wrk_wsk(rps, action_url, duration):
 # Function to run wrk and get the output
 def run_wrk(rps, action_url, duration):
     """Run wrk2 for a specific RPS and return the latency data."""
-    command = f"wrk -t10 -c15 -d{duration}s -R{rps} --latency {action_url}"
+    command = f"wrk -t10 -c100 -d{duration}s -R{rps} --latency {action_url}"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     return result.stdout
 
