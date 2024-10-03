@@ -132,10 +132,10 @@ url = "http://10.10.0.1:3233/api/v1/namespaces/_/actions/gencnt1?blocking=true&r
 latency_50th = []
 latency_90th = []
 latency_99th = []
-rps_values = [20, 40, 60, 80, 100, 120, 140]
+rps_values = [20 * x for x in range(1,8)]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
-    output = run_wrk(rps, url, 30)
+    output = run_wrk_wsk(rps, url, 30)
     time.sleep(20)
     latencies = parse_latency_output(output)
     print(f"laaatt => {output}")
@@ -146,32 +146,8 @@ for rps in rps_values:
     latency_50th.append(latencies.get('50th', None))
     latency_90th.append(latencies.get('90th', None))
     latency_99th.append(latencies.get('99th', None))
-plot(rps_values, latency_50th, latency_90th, latency_99th, "gencnt1")
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencnt1.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "gencnt1.png")
 
-
-# In[]:
-# gencnt2
-url = "http://10.10.0.1:3233/api/v1/namespaces/_/actions/gencnt2?blocking=true&result=true"
-## warming
-# run_wrk(1, url, duration=20)
-## warming done
-latency_50th = []
-latency_90th = []
-latency_99th = []
-rps_values = [20, 40, 60, 80, 100, 120, 140]
-for rps in rps_values:
-    print(f"Running wrk2 for {rps} requests per second...")
-    output = run_wrk(rps, url, 30)
-    time.sleep(20)
-    latencies = parse_latency_output(output)
-    print(f"laaatt => {output}")
-    print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
-    print(f"90th percentile: {latencies.get('90th', 'N/A')} ms")
-    print(f"99th percentile: {latencies.get('99th', 'N/A')} ms")
-    # Append the results
-    latency_50th.append(latencies.get('50th', None))
-    latency_90th.append(latencies.get('90th', None))
-    latency_99th.append(latencies.get('99th', None))
-plot(rps_values, latency_50th, latency_90th, latency_99th, "gencnt2")
 
 # %%

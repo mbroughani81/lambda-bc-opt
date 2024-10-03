@@ -8,15 +8,13 @@ wrk.headers["Content-Type"] = "application/json"
 wrk.headers["Authorization"] = "Basic " .. auth
 
 request = function()
-   print(wrk.url)
-   io.flush()
    return wrk.format(nil)
 end
 
 response = function(status, headers, body)
    -- Log or process the response status, headers, and body
-   print("Status: " .. status)
-   print("Body: " .. body)
+   --  print("Status: " .. status)
+   -- print("Body: " .. body)
    io.flush()
 
    -- You could also handle success/failure counting here:

@@ -15,18 +15,6 @@ type BatchedRedisDB struct {
 	rc *redis.Client
 }
 
-// todo: use generic operations
-type Op interface{}
-
-type GetOp struct {
-	K string `json:"k"`
-}
-
-type SetOp struct {
-	K string `json:"k"`
-	V string `json:"v"`
-}
-
 type BatchOp struct {
 	op Op
 	ch chan string
@@ -42,22 +30,18 @@ var batchSize = 10
 var loopInterval = 10 * time.Millisecond
 
 var mu sync.Mutex
-
 var lastExec time.Time
 
 func execPipeline(ctx context.Context, pipe redis.Pipeliner) error {
 	for retries := 0; retries < 3; retries++ {
 		_, err := pipe.Exec(ctx)
 		if err == nil {
-			// Pipeline executed successfully
 			return nil
 		} else if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			log.Printf("Pipeline operation timed out. Retrying... attempt %d", retries+1)
 		} else if err != nil && err != redis.Nil {
 			log.Printf("Pipeline failed with error: %v. Retrying... attempt %d", err, retries+1)
 		}
-
-		// Retry with a delay
 		time.Sleep(2 * time.Millisecond)
 	}
 	return fmt.Errorf("pipeline execution failed after 3 retries")
@@ -66,7 +50,6 @@ func execPipeline(ctx context.Context, pipe redis.Pipeliner) error {
 func execBatch(rdb *BatchedRedisDB) {
 	ctx := context.Background()
 	batchResponses := make(chan BatchResponse, batchSize)
-	// do the operations in pipleline
 	pipe := rdb.rc.Pipeline()
 	processedCount := 0
 	for i := 0; i < batchSize; i++ {
@@ -93,7 +76,6 @@ func execBatch(rdb *BatchedRedisDB) {
 			break
 		}
 	}
-	// executing the pipeline
 	if processedCount > 0 {
 		log.Printf(">> processedCount %d", processedCount)
 		log.Printf(">> batch size %d", len(batch))
@@ -181,11 +163,9 @@ func ConsBatchedRedisDB() *BatchedRedisDB {
 	go func(rdb *BatchedRedisDB) {
 		for range time.Tick(loopInterval) {
 			if len(batch) > 0 {
-				log.Printf("loop: batch size => %d", len(batch))
-				log.Println("exec: TL reached!")
+				log.Printf("exec: TL reached! batch size : %d", len(batch))
 				execBatch(rdb)
 			}
-			// batch = nil
 		}
 	}(&rdb)
 
