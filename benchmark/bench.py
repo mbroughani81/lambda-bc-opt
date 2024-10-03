@@ -126,17 +126,14 @@ plot(rps_values, latency_50th, latency_90th, latency_99th, "redis-batched-100-1.
 # In[]:
 # gencnt1
 url = "http://10.10.0.1:3233/api/v1/namespaces/_/actions/gencnt1?blocking=true&result=true"
-## warming
-# run_wrk(1, url, duration=20)
-## warming done
 latency_50th = []
 latency_90th = []
 latency_99th = []
-rps_values = [20 * x for x in range(1,8)]
+rps_values = [10 * x for x in range(3,10)]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
     output = run_wrk_wsk(rps, url, 30)
-    time.sleep(20)
+    time.sleep(5)
     latencies = parse_latency_output(output)
     print(f"laaatt => {output}")
     print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
@@ -146,8 +143,8 @@ for rps in rps_values:
     latency_50th.append(latencies.get('50th', None))
     latency_90th.append(latencies.get('90th', None))
     latency_99th.append(latencies.get('99th', None))
-export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencnt1.csv")
-plot(rps_values, latency_50th, latency_90th, latency_99th, "gencnt1.png")
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencnt-100.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "gencnt-100.png")
 
 
 # %%

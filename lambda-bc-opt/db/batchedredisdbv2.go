@@ -39,6 +39,7 @@ func (rdb *BatchedRedisDBV2) Get(k string) (string, error) {
 
 	return string(body), nil
 }
+
 func (rdb *BatchedRedisDBV2) Set(k string, v string) error {
 	return errors.New("Not implemented!")
 }

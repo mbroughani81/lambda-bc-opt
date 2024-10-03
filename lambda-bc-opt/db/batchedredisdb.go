@@ -17,7 +17,7 @@ type BatchedRedisDB struct {
 
 type BatchOp struct {
 	op Op
-	ch chan string
+	ch chan<- string
 }
 
 type BatchResponse struct {
@@ -26,8 +26,8 @@ type BatchResponse struct {
 }
 
 var batch chan BatchOp
-var batchSize = 10
-var loopInterval = 10 * time.Millisecond
+var batchSize = 100
+var loopInterval = 100 * time.Millisecond
 
 var mu sync.Mutex
 var lastExec time.Time
@@ -115,7 +115,7 @@ forLoop:
 	}
 }
 
-func appendToBatch(rdb *BatchedRedisDB, op Op, ch chan string) {
+func appendToBatch(rdb *BatchedRedisDB, op Op, ch chan<- string) {
 	switch op.(type) {
 	case GetOp:
 		batch <- BatchOp{op, ch}
@@ -134,7 +134,7 @@ func GetBatch() chan BatchOp {
 	return batch
 }
 
-// KeyValueStoreDB
+// KeyValueStoreDB & AKeyVlaueStoreDB
 func (rdb *BatchedRedisDB) Get(k string) (string, error) {
 	op := GetOp{K: k}
 	ch := make(chan string)
@@ -144,6 +144,13 @@ func (rdb *BatchedRedisDB) Get(k string) (string, error) {
 	result := <-ch
 
 	return result, nil
+}
+func (rdb *BatchedRedisDB) AGet(k string, cb chan<- string) error {
+	op := GetOp{K: k}
+	go func() {
+		appendToBatch(rdb, op, cb)
+	}()
+	return nil
 }
 func (rdb *BatchedRedisDB) Set(k string, v string) error {
 	op := SetOp{K: k, V: v}

@@ -4,8 +4,12 @@ import (
 	"fmt"
 	"lambda-bc-opt/db"
 	"log"
+	"runtime"
 	"strconv"
 	"sync"
+	"time"
+
+	"net/http"
 )
 
 var n int = 200000
@@ -45,10 +49,21 @@ func fn2() {
 	cnt++
 	greeting := fmt.Sprintf("Hello! cnt is %d.\n", cnt)
 	log.Printf("greeting => %s", greeting)
+}
 
+func handler(http.ResponseWriter, *http.Request) {
+	time.Sleep(3 * time.Second)
+	log.Println("sleep done!")
+}
+
+func fn3() {
+	runtime.GOMAXPROCS(2)
+	http.HandleFunc("/get", handler)
+	fmt.Println("Server listening on localhost:8080")
+	log.Fatal(http.ListenAndServe("10.10.0.1:8080", nil))
 }
 
 func main() {
 	log.Println("START")
-	fn2()
+	fn3()
 }
