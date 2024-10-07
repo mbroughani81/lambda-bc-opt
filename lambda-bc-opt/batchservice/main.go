@@ -50,5 +50,5 @@ func main() {
 	// API
 	http.HandleFunc("/get", getHandler(rdb))
 	fmt.Println("Server listening on localhost:8080")
-	log.Fatal(http.ListenAndServe("10.10.0.1:8080", nil))
+	log.Fatal(http.ListenAndServe("127.0.0.1:8080", nil))
 }
