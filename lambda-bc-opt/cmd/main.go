@@ -63,7 +63,63 @@ func fn3() {
 	log.Fatal(http.ListenAndServe("10.10.0.1:8080", nil))
 }
 
+const numWorkers = 5
+
+// Worker function that simulates a blocking operation (e.g., network request)
+func worker(id int, jobs <-chan string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for url := range jobs {
+		// Simulate blocking with a network request
+		resp, err := http.Get(url)
+		if err != nil {
+			fmt.Printf("Worker %d: failed to fetch %s: %v\n", id, url, err)
+			continue
+		}
+		fmt.Printf("Worker %d: fetched %s with status %s\n", id, url, resp.Status)
+		resp.Body.Close()
+		time.Sleep(1 * time.Second) // Simulate some additional blocking time
+	}
+}
+
+func fn4() {
+	var wg sync.WaitGroup
+	jobs := make(chan string, 10)
+
+	// Start a pool of workers
+	for i := 1; i <= numWorkers; i++ {
+		wg.Add(1)
+		go worker(i, jobs, &wg)
+	}
+
+	// Enqueue jobs
+	urls := []string{
+		"https://golang.org",
+		"https://www.google.com",
+		"https://www.github.com",
+		"https://www.stackoverflow.com",
+		"https://www.reddit.com",
+		"https://golang.org",
+		"https://www.google.com",
+		"https://www.github.com",
+		"https://www.stackoverflow.com",
+		"https://www.reddit.com",
+		"https://golang.org",
+		"https://www.google.com",
+		"https://www.github.com",
+		"https://www.stackoverflow.com",
+		"https://www.reddit.com",
+	}
+
+	for _, url := range urls {
+		jobs <- url
+	}
+
+	close(jobs)
+	wg.Wait() // Wait for all workers to finish
+	fmt.Println("All workers done")
+}
+
 func main() {
 	log.Println("START")
-	fn3()
+	fn4()
 }

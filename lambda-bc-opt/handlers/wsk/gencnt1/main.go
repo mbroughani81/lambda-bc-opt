@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"runtime"
 	"sync"
 
 	"lambda-bc-opt/db"
@@ -10,26 +12,59 @@ import (
 
 var rdb db.KeyValueStoreDB = db.ConsBatchedRedisDBV2("10.10.0.1:8080")
 
-func Main(args map[string]interface{}) map[string]interface{} {
-	n := 10
-	key := "cnt"
+func init() {
+	log.SetOutput(os.Stdout)
+	log.Printf("thread : %d", runtime.GOMAXPROCS(-1))
+}
 
-	var wg sync.WaitGroup
-	var result string
+func worker(id int, jobs <-chan string, results chan<- string, wg *sync.WaitGroup) {
+	defer wg.Done()
 
-	wg.Add(n)
-	for i := 0; i < n; i++ {
-		go func(id int) {
-			result, _ = rdb.Get(key)
-			log.Printf("id = %d, resultt => %s", id, result)
-			wg.Done()
-		}(i)
+	for key := range jobs {
+		result, err := rdb.Get(key)
+		if err != nil {
+			log.Printf("Worker %d: error => %v", id, err)
+			results <- fmt.Sprintf("Worker %d: error => %v", id, err)
+			continue
+		}
+
+		log.Printf("Worker %d: result => %s", id, result)
+		results <- result
 	}
-	wg.Wait()
-	log.Println("TAMAM")
+}
 
+func Main(args map[string]interface{}) map[string]interface{} {
+	key := "cnt"
+	numJobs := 10    // Number of rdb.Get operations
+	numWorkers := 10 // Number of workers
+	var wg sync.WaitGroup
+
+	jobs := make(chan string, numJobs)
+	results := make(chan string, numJobs)
+
+	for w := 1; w <= numWorkers; w++ {
+		wg.Add(1)
+		go worker(w, jobs, results, &wg)
+	}
+
+	for j := 0; j < numJobs; j++ {
+		jobs <- key
+	}
+	close(jobs)
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	var lastResult string
+	for res := range results {
+		lastResult = res
+	}
+
+	log.Println("All workers completed.")
 	return map[string]interface{}{
 		"statusCode": 200,
-		"body":       fmt.Sprintf("key = %s, value = %s", key, result),
+		"body":       fmt.Sprintf("Last result: %s", lastResult),
 	}
 }

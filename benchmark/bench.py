@@ -18,7 +18,7 @@ import csv
 # Function to run wrk and get the output
 def run_wrk_wsk(rps, action_url, duration):
     """Run wrk2 for a specific RPS and return the latency data."""
-    command = f"wrk -t10 -c15 -d{duration}s -R{rps} --latency -s visitorcounter_request_openwhisk.lua {action_url}"
+    command = f"wrk -t6 -c12 -d{duration}s -R{rps} --latency -s visitorcounter_request_openwhisk.lua {action_url}"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     return result.stdout
 
@@ -129,7 +129,7 @@ url = "http://10.10.0.1:3233/api/v1/namespaces/_/actions/gencnt1?blocking=true&r
 latency_50th = []
 latency_90th = []
 latency_99th = []
-rps_values = [10 * x for x in range(3,10)]
+rps_values = [20 * x for x in range(1,10)]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
     output = run_wrk_wsk(rps, url, 30)
@@ -143,8 +143,8 @@ for rps in rps_values:
     latency_50th.append(latencies.get('50th', None))
     latency_90th.append(latencies.get('90th', None))
     latency_99th.append(latencies.get('99th', None))
-export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencnt-100.csv")
-plot(rps_values, latency_50th, latency_90th, latency_99th, "gencnt-100.png")
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencnt-100-100-10task.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "gencnt-100-100-10task.png")
 
 
 # %%

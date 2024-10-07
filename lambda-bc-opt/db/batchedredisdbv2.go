@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"time"
 )
 
 type BatchedRedisDBV2 struct {
@@ -14,6 +16,8 @@ type BatchedRedisDBV2 struct {
 }
 
 func (rdb *BatchedRedisDBV2) Get(k string) (string, error) {
+	start := time.Now()
+
 	op := GetOp{K: k}
 
 	jsonData, err := json.Marshal(op)
@@ -29,6 +33,11 @@ func (rdb *BatchedRedisDBV2) Get(k string) (string, error) {
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
+
+	end := time.Now()
+	// fmt.Printf("BatchedRedisDBV2 Get => %v", end.Sub(start))
+	log.Printf("BatchedRedisDBV2 Get => %v", end.Sub(start))
+
 	if err != nil {
 		return "", fmt.Errorf("error reading response body: %v", err)
 	}
