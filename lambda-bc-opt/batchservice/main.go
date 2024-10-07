@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"lambda-bc-opt/db"
+	"lambda-bc-opt/utility"
 	"log"
 	"net/http"
 )
@@ -48,7 +49,11 @@ func main() {
 	// rdb := db.ConsMockRedisDB()
 
 	// API
+	host := utility.GetEnv("APP_HOST", "127.0.0.1")
+	port := utility.GetEnv("APP_PORT", "8080")
+	address := fmt.Sprintf("%s:%s", host, port)
+
 	http.HandleFunc("/get", getHandler(rdb))
-	fmt.Println("Server listening on localhost:8080")
-	log.Fatal(http.ListenAndServe("127.0.0.1:8080", nil))
+	fmt.Printf("Server listening on %s\n", address)
+	log.Fatal(http.ListenAndServe(address, nil))
 }
