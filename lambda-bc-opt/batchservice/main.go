@@ -54,6 +54,6 @@ func main() {
 	address := fmt.Sprintf("%s:%s", host, port)
 
 	http.HandleFunc("/get", getHandler(rdb))
-	fmt.Printf("Server listening on %s\n", address)
+	fmt.Printf("Server listening onnn %s\n", address)
 	log.Fatal(http.ListenAndServe(address, nil))
 }

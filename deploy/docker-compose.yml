@@ -20,7 +20,7 @@ services:
   redis:
     image: redis:7.4-bookworm
     ports:
-      - "${REDIS_PORT}:${REDIS_PORT}"
+      - "${REDIS_PORT}:6379"
     networks:
       - mynetwork
 
