@@ -13,7 +13,7 @@ import (
 
 // var rdb db.KeyValueStoreDB = db.ConsRedisDB()
 
-var rdb db.KeyValueStoreDB = db.ConsBatchedRedisDB()
+var rdb db.KeyValueStoreDB = db.ConsBatchedRedisDB("10.10.0.1", "6379")
 
 var counter int = 0
 

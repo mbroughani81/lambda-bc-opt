@@ -162,8 +162,8 @@ func (rdb *BatchedRedisDB) Set(k string, v string) error {
 	return nil
 }
 
-func ConsBatchedRedisDB() *BatchedRedisDB {
-	rc := InitRedis()
+func ConsBatchedRedisDB(host string, port string) *BatchedRedisDB {
+	rc := InitRedis(host, port)
 	rdb := BatchedRedisDB{rc: rc}
 	batch = make(chan BatchOp, 100*batchSize)
 

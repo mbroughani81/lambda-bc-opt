@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	batchedRedisDB := db.ConsBatchedRedisDB()
+	batchedRedisDB := db.ConsBatchedRedisDB("10.10.0.1", "6379")
 
 	var wg sync.WaitGroup
 	wg.Add(2)

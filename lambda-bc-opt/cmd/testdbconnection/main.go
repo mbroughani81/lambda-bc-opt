@@ -11,7 +11,7 @@ import (
 )
 
 func test1(n int, sleep int) {
-	var redisDB db.KeyValueStoreDB = db.ConsRedisDB()
+	var redisDB db.KeyValueStoreDB = db.ConsRedisDB("10.10.0.1", "6379")
 	for {
 		start := time.Now()
 
@@ -29,7 +29,7 @@ func test1(n int, sleep int) {
 }
 
 func test2(n int, sleep int) {
-	var redisDB *db.RedisDB = db.ConsRedisDB()
+	var redisDB *db.RedisDB = db.ConsRedisDB("10.10.0.1", "6379")
 	rc := redisDB.Getrc()
 	// Using pipe
 	result := [10000]*redis.StringCmd{}

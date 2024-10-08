@@ -3,3 +3,7 @@
 *.png
 *.zip
 *.csv
+manifest.xml
+deploy/cloudlab-username
+
+__pycache__

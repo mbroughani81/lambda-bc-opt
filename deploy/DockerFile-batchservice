@@ -2,9 +2,10 @@ FROM golang:1.23 as builder
 
 WORKDIR /app
 
-RUN git clone https://github.com/mbroughani81/lambda-bc-opt .
+# RUN git clone https://github.com/mbroughani81/lambda-bc-opt .
+COPY . .
 
-# RUN ls -la && sleep 20
+RUN ls -la && sleep 5
 
 RUN cd lambda-bc-opt && \
     go build -o BatchService batchservice/main.go && \
@@ -21,4 +22,3 @@ COPY --from=builder /app/deploy/BatchService /app/deploy/
 RUN chmod +x BatchService
 
 CMD ["./BatchService"]
-

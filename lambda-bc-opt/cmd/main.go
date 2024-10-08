@@ -15,7 +15,7 @@ import (
 var n int = 200000
 
 func fn1() {
-	rdb := db.ConsRedisDB()
+	rdb := db.ConsRedisDB("10.10.0.1", "6379")
 
 	var wg sync.WaitGroup
 	wg.Add(n)
@@ -37,7 +37,7 @@ func fn1() {
 }
 
 func fn2() {
-	rdb := db.ConsRedisDB()
+	rdb := db.ConsRedisDB("10.10.0.1", "6379")
 
 	for i := 0; i < n; i++ {
 		rdb.Get("cnt")

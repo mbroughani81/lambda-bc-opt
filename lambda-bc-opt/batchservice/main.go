@@ -30,10 +30,10 @@ func getHandler(rdb db.AKeyValueStoreDB) func(http.ResponseWriter, *http.Request
 			return
 		}
 
-		log.Printf("Received key: %s\n", getOp.K)
 		ch := make(chan string)
 		rdb.AGet(getOp.K, ch)
 		result := <-ch
+		log.Printf("Received key: %s => %s\n", getOp.K, result)
 
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(result))
@@ -45,7 +45,9 @@ func main() {
 	// log.SetOutput(io.Discard)
 	// rdb := db.ConsBatchedRedisDB()
 
-	rdb := db.ConsBatchedRedisDB()
+	redisHost := utility.GetEnv("REDIS_HOST", "10.10.0.1")
+	redisPort := "6379"
+	rdb := db.ConsBatchedRedisDB(redisHost, redisPort)
 	// rdb := db.ConsMockRedisDB()
 
 	// API

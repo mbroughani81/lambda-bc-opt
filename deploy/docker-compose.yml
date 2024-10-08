@@ -3,8 +3,8 @@ version: '3.8'
 services:
   batchservice:
     build:
-      context: .
-      dockerfile: DockerFile-batchservice
+      context: ..
+      dockerfile: deploy/DockerFile-batchservice
     env_file:
       - .env
     ports:

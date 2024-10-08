@@ -2,19 +2,18 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"log"
+
 	// "time"
 
 	"github.com/redis/go-redis/v9"
 )
 
-func InitRedis() *redis.Client {
+func InitRedis(host string, port string) *redis.Client {
 	return redis.NewClient(&redis.Options{
-		Addr: "10.10.0.1:6379", // Change this to your Redis server address
-		DB:   0,                // Default DB number
-		// DialTimeout:  10 * time.Second,
-		// ReadTimeout:  10 * time.Second,
-		// MinIdleConns: 10,
+		Addr:     fmt.Sprintf("%s:%s", host, port),
+		DB:       0,
 		PoolSize: 1000,
 	})
 }
@@ -47,7 +46,7 @@ func (rdb *RedisDB) Set(k string, v string) error {
 	return nil
 }
 
-func ConsRedisDB() *RedisDB {
-	rc := InitRedis()
+func ConsRedisDB(host string, port string) *RedisDB {
+	rc := InitRedis(host, port)
 	return &RedisDB{rc: rc}
 }
