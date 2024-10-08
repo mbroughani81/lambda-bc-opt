@@ -1,7 +1,19 @@
 #!/bin/bash
 
 # Function to install Docker on Ubuntu
+is_docker_installed() {
+    if command -v docker &> /dev/null; then
+        echo "Docker is already installed."
+        return 0
+    else
+        return 1
+    fi
+}
 install_docker_ubuntu() {
+    if is_docker_installed; then
+        return
+    fi
+
     echo "Updating package information..."
     sudo apt-get update -y
 
@@ -24,11 +36,24 @@ install_docker_ubuntu() {
     sudo systemctl start docker
     sudo systemctl enable docker
 
+    echo "Adding user $(whoami) to the docker group..."
+    sudo usermod -aG docker $(whoami)
+
     echo "Docker installed successfully on Ubuntu!"
 }
 
-# Function to install Docker Compose
+is_docker_compose_installed() {
+    if command -v docker-compose &> /dev/null; then
+        echo "Docker Compose is already installed."
+        return 0
+    else
+        return 1
+    fi
+}
 install_docker_compose() {
+    if is_docker_compose_installed; then
+        return
+    fi
     echo "Installing Docker Compose..."
 
     # Download the latest version of Docker Compose (replace version if needed)
@@ -47,9 +72,3 @@ install_docker_compose() {
 # Install Docker and Docker Compose
 install_docker_ubuntu
 install_docker_compose
-
-# Add the current user to the docker group to avoid using sudo for Docker commands
-echo "Adding user $(whoami) to the docker group..."
-sudo usermod -aG docker $(whoami)
-
-echo "Docker and Docker Compose installation complete. You may need to log out and back in for group changes to take effect."
