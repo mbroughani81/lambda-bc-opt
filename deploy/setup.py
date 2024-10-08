@@ -7,7 +7,7 @@ def master_conn():
     return Connection(HOST_SERVERS[0], connect_kwargs={"key_filename": KEYFILE})
 
 def main():
-    print(f"KIR => {KEYFILE} {HOST_SERVERS[0]}")
+    print(f"K => {KEYFILE} {HOST_SERVERS[0]}")
     conn = master_conn()
 
     try:
