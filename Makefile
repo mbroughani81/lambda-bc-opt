@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+SHELL:=/bin/bash
 OW_USER?=openwhisk
 OW_VER?=v1.23:nightly
 OW_COMPILER?=$(OW_USER)/action-golang-$(OW_VER)
@@ -22,7 +22,7 @@ OW_COMPILER?=$(OW_USER)/action-golang-$(OW_VER)
 HANDLERS_DIR=lambda-bc-opt/handlers/wsk
 ZIP_DIR=zipzip
 
-.PHONY: devel clean $(ZIP_DIR)
+.PHONY: deploy devel clean $(ZIP_DIR)
 
 # Create an action for each subfolder in $(HANDLERS_DIR)
 devel:
@@ -40,6 +40,22 @@ devel:
 		); \
 	done; \
 	rm -rf $(ZIP_DIR);
+
+# Deploy to OpenWhisk
+deploy:
+	rm -rf $(ZIP_DIR)
+	for dir in $(HANDLERS_DIR)/*/; do \
+		rm -rf $(ZIP_DIR); \
+		action_name=$$(basename $$dir); \
+		echo "Building and zipping $$action_name"; \
+		mkdir -p $(ZIP_DIR); \
+		cp $$dir/main.go $(ZIP_DIR); \
+		cp -r lambda-bc-opt/* $(ZIP_DIR); \
+		cd $(ZIP_DIR) && zip - -r . | docker run -i $(OW_COMPILER) -compile main > ../$$action_name.zip && cd .. ;\
+		echo "Deploying $$action_name"; \
+		wsk action create $$action_name $$action_name.zip --main exec --docker $(OW_COMPILER); \
+		rm $$action_name.zip; \
+	done;
 
 # Copy the main.go file from the subfolder and zip it
 zip:

@@ -16,18 +16,18 @@ import csv
 # In[]:
 # Openwhisk run wrk
 # Function to run wrk and get the output
-def run_wrk_wsk(rps, action_url, duration):
+def run_wrk_wsk(rps, action_url,thread_cnt=10, conn_cnt=20, duration=30):
     """Run wrk2 for a specific RPS and return the latency data."""
-    command = f"wrk -t6 -c12 -d{duration}s -R{rps} --latency -s visitorcounter_request_openwhisk.lua {action_url}"
+    command = f"wrk -t{thread_cnt} -c{conn_cnt} -d{duration}s -R{rps} --latency -s visitorcounter_request_openwhisk.lua {action_url}"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     return result.stdout
 
 # In[]:
 # run wrk
 # Function to run wrk and get the output
-def run_wrk(rps, action_url, duration):
+def run_wrk(rps, action_url,thread_cnt=10, conn_cnt=20, duration=30):
     """Run wrk2 for a specific RPS and return the latency data."""
-    command = f"wrk -t10 -c100 -d{duration}s -R{rps} --latency {action_url}"
+    command = f"wrk -t{thread_cnt} -c{conn_cnt} -d{duration}s -R{rps} --latency {action_url}"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     return result.stdout
 
@@ -124,16 +124,18 @@ export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "redis-batch
 plot(rps_values, latency_50th, latency_90th, latency_99th, "redis-batched-100-1.png")
 
 # In[]:
-# gencnt1
-url = "http://10.10.0.1:3233/api/v1/namespaces/_/actions/gencnt1?blocking=true&result=true"
+# naive 1-connection gencnt without lambda
+url = "http://localhost:8080/getter"
 latency_50th = []
 latency_90th = []
 latency_99th = []
-rps_values = [20 * x for x in range(1,10)]
+thread_cnt = 1
+conn_cnt = 1
+rps_values = [500 * x for x in range(1,5)]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
-    output = run_wrk_wsk(rps, url, 30)
-    time.sleep(5)
+    output = run_wrk(rps, url, thread_cnt, conn_cnt, 30)
+    time.sleep(20)
     latencies = parse_latency_output(output)
     print(f"laaatt => {output}")
     print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
@@ -143,8 +145,84 @@ for rps in rps_values:
     latency_50th.append(latencies.get('50th', None))
     latency_90th.append(latencies.get('90th', None))
     latency_99th.append(latencies.get('99th', None))
-export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencnt-100-100-10task.csv")
-plot(rps_values, latency_50th, latency_90th, latency_99th, "gencnt-100-100-10task.png")
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencntNaive-withoutLambda.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "genCntNaive-withoutLambda.png")
 
+# In[]:
+# naive 1-connection gencnt with lambda
+url = "http://10.10.0.1:3233/api/v1/namespaces/_/actions/gencntNaive?blocking=true&result=true"
+latency_50th = []
+latency_90th = []
+latency_99th = []
+thread_cnt = 1
+conn_cnt = 1
+rps_values = [50 * x for x in range(1,10)]
+for rps in rps_values:
+    print(f"Running wrk2 for {rps} requests per second...")
+    output = run_wrk_wsk(rps, url, thread_cnt, conn_cnt, 30)
+    time.sleep(20)
+    latencies = parse_latency_output(output)
+    print(f"laaatt => {output}")
+    print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
+    print(f"90th percentile: {latencies.get('90th', 'N/A')} ms")
+    print(f"99th percentile: {latencies.get('99th', 'N/A')} ms")
+    # Append the results
+    latency_50th.append(latencies.get('50th', None))
+    latency_90th.append(latencies.get('90th', None))
+    latency_99th.append(latencies.get('99th', None))
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencntNaive-withLambda.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "genCntNaive-withLambd.png")
+
+
+# In[]:
+# gencntMock
+url = "http://10.10.0.1:3233/api/v1/namespaces/_/actions/gencntMock?blocking=true&result=true"
+latency_50th = []
+latency_90th = []
+latency_99th = []
+thread_cnt = 6
+conn_cnt = 6
+rps_values = [20 * x for x in range(5,15)]
+for rps in rps_values:
+    print(f"Running wrk2 for {rps} requests per second...")
+    output = run_wrk_wsk(rps, url, thread_cnt, conn_cnt, 30)
+    time.sleep(10)
+    latencies = parse_latency_output(output)
+    print(f"output => {output}")
+    print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
+    print(f"90th percentile: {latencies.get('90th', 'N/A')} ms")
+    print(f"99th percentile: {latencies.get('99th', 'N/A')} ms")
+    # Append the results
+    latency_50th.append(latencies.get('50th', None))
+    latency_90th.append(latencies.get('90th', None))
+    latency_99th.append(latencies.get('99th', None))
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencntMock-new.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "gencntMock-new.png")
+
+
+# In[]:
+# gencntNaive
+url = "http://10.10.0.1:3233/api/v1/namespaces/_/actions/gencntNaive?blocking=true&result=true"
+latency_50th = []
+latency_90th = []
+latency_99th = []
+thread_cnt = 6
+conn_cnt = 6
+rps_values = [20 * x for x in range(5,15)]
+for rps in rps_values:
+    print(f"Running wrk2 for {rps} requests per second...")
+    output = run_wrk_wsk(rps, url, thread_cnt, conn_cnt, 30)
+    time.sleep(10)
+    latencies = parse_latency_output(output)
+    print(f"output => {output}")
+    print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
+    print(f"90th percentile: {latencies.get('90th', 'N/A')} ms")
+    print(f"99th percentile: {latencies.get('99th', 'N/A')} ms")
+    # Append the results
+    latency_50th.append(latencies.get('50th', None))
+    latency_90th.append(latencies.get('90th', None))
+    latency_99th.append(latencies.get('99th', None))
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencntNaive.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "gencntNaive.png")
 
 # %%
