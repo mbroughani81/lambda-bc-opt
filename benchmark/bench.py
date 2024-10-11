@@ -120,8 +120,8 @@ for rps in rps_values:
     latency_50th.append(latencies.get('50th', None))
     latency_90th.append(latencies.get('90th', None))
     latency_99th.append(latencies.get('99th', None))
-export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "redis-batched-100-1.csv")
-plot(rps_values, latency_50th, latency_90th, latency_99th, "redis-batched-100-1.png")
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "redis-naive.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "redis-naive.png")
 
 # In[]:
 # naive 1-connection gencnt without lambda
