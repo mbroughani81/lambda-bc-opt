@@ -180,7 +180,7 @@ url = "http://10.10.0.1:3233/api/v1/namespaces/_/actions/gencntMock?blocking=tru
 latency_50th = []
 latency_90th = []
 latency_99th = []
-thread_cnt = 6
+thread_cnt = 3
 conn_cnt = 6
 rps_values = [20 * x for x in range(5,15)]
 for rps in rps_values:
@@ -196,8 +196,8 @@ for rps in rps_values:
     latency_50th.append(latencies.get('50th', None))
     latency_90th.append(latencies.get('90th', None))
     latency_99th.append(latencies.get('99th', None))
-export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencntMock-new.csv")
-plot(rps_values, latency_50th, latency_90th, latency_99th, "gencntMock-new.png")
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencntMock-bin-3.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "gencntMock-bin-3.png")
 
 
 # In[]:
@@ -206,7 +206,7 @@ url = "http://10.10.0.1:3233/api/v1/namespaces/_/actions/gencntNaive?blocking=tr
 latency_50th = []
 latency_90th = []
 latency_99th = []
-thread_cnt = 6
+thread_cnt = 3
 conn_cnt = 6
 rps_values = [20 * x for x in range(5,15)]
 for rps in rps_values:
@@ -222,7 +222,7 @@ for rps in rps_values:
     latency_50th.append(latencies.get('50th', None))
     latency_90th.append(latencies.get('90th', None))
     latency_99th.append(latencies.get('99th', None))
-export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencntNaive.csv")
-plot(rps_values, latency_50th, latency_90th, latency_99th, "gencntNaive.png")
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencntNaive-bin-3.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "gencntNaive-bin-3.png")
 
 # %%

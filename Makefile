@@ -53,7 +53,7 @@ deploy:
 		cp -r lambda-bc-opt/* $(ZIP_DIR); \
 		cd $(ZIP_DIR) && zip - -r . | docker run -i $(OW_COMPILER) -compile main > ../$$action_name.zip && cd .. ;\
 		echo "Deploying $$action_name"; \
-		wsk action create $$action_name $$action_name.zip --main exec --docker $(OW_COMPILER); \
+		wsk action update $$action_name $$action_name.zip --main exec --docker $(OW_COMPILER) --memory 128; \
 		rm $$action_name.zip; \
 	done;
 
