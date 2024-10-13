@@ -156,7 +156,7 @@ url = "http://localhost:8080/getterBatched"
 latency_50th = []
 latency_90th = []
 latency_99th = []
-rps_values = [5000 * x for x in range(10,20)]
+rps_values = [5000 * x for x in range(1,10)]
 thread_cnt = 3
 conn_cnt = 10
 for rps in rps_values:
