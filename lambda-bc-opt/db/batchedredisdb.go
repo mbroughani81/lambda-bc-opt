@@ -27,7 +27,7 @@ type BatchResponse struct {
 
 var batch chan BatchOp
 var batchSize = 100
-var loopInterval = 100 * time.Millisecond
+var loopInterval = 100 * time.Microsecond
 
 var mu sync.Mutex
 var lastExec time.Time

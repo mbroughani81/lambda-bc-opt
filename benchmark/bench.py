@@ -102,14 +102,16 @@ def read_from_csv(filename):
 
 # In[]:
 # Code-level batch call optimization
-url = "http://localhost:8080/getter"
+url = "http://localhost:8080/getterMock"
 latency_50th = []
 latency_90th = []
 latency_99th = []
-rps_values = [1000 * x for x in range(1,10)]
+rps_values = [10000 * x for x in range(9,10)]
+thread_cnt = 3
+conn_cnt = 10
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
-    output = run_wrk(rps, url, 30)
+    output = run_wrk(rps, url, thread_cnt, conn_cnt)
     time.sleep(20)
     latencies = parse_latency_output(output)
     print(f"laaatt => {output}")
@@ -120,8 +122,58 @@ for rps in rps_values:
     latency_50th.append(latencies.get('50th', None))
     latency_90th.append(latencies.get('90th', None))
     latency_99th.append(latencies.get('99th', None))
-export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "redis-naive.csv")
-plot(rps_values, latency_50th, latency_90th, latency_99th, "redis-naive.png")
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "getter-mock.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "getter-mock.png")
+
+# In[]:
+# Code-level batch call optimization
+url = "http://localhost:8080/getterNaive"
+latency_50th = []
+latency_90th = []
+latency_99th = []
+rps_values = [5000 * x for x in range(1,10)]
+thread_cnt = 3
+conn_cnt = 10
+for rps in rps_values:
+    print(f"Running wrk2 for {rps} requests per second...")
+    output = run_wrk(rps, url, thread_cnt, conn_cnt)
+    time.sleep(20)
+    latencies = parse_latency_output(output)
+    print(f"laaatt => {output}")
+    print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
+    print(f"90th percentile: {latencies.get('90th', 'N/A')} ms")
+    print(f"99th percentile: {latencies.get('99th', 'N/A')} ms")
+    # Append the results
+    latency_50th.append(latencies.get('50th', None))
+    latency_90th.append(latencies.get('90th', None))
+    latency_99th.append(latencies.get('99th', None))
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "getter-naive-pool-20.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "getter-naive-pool-20.png")
+
+# In[]:
+# Code-level batch call optimization
+url = "http://localhost:8080/getterBatched"
+latency_50th = []
+latency_90th = []
+latency_99th = []
+rps_values = [5000 * x for x in range(10,20)]
+thread_cnt = 3
+conn_cnt = 10
+for rps in rps_values:
+    print(f"Running wrk2 for {rps} requests per second...")
+    output = run_wrk(rps, url, thread_cnt, conn_cnt)
+    time.sleep(20)
+    latencies = parse_latency_output(output)
+    print(f"laaatt => {output}")
+    print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
+    print(f"90th percentile: {latencies.get('90th', 'N/A')} ms")
+    print(f"99th percentile: {latencies.get('99th', 'N/A')} ms")
+    # Append the results
+    latency_50th.append(latencies.get('50th', None))
+    latency_90th.append(latencies.get('90th', None))
+    latency_99th.append(latencies.get('99th', None))
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "getter-batched-pool-20.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "getter-batched-pool-20.png")
 
 # In[]:
 # naive 1-connection gencnt without lambda
@@ -129,9 +181,9 @@ url = "http://localhost:8080/getter"
 latency_50th = []
 latency_90th = []
 latency_99th = []
-thread_cnt = 1
-conn_cnt = 1
-rps_values = [500 * x for x in range(1,5)]
+thread_cnt = 10
+conn_cnt = 10
+rps_values = [1000 * x for x in range(9,10)]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
     output = run_wrk(rps, url, thread_cnt, conn_cnt, 30)

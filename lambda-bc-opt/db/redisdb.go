@@ -14,7 +14,7 @@ func InitRedis(host string, port string) *redis.Client {
 	return redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", host, port),
 		DB:       0,
-		PoolSize: 1000,
+		PoolSize: 20,
 	})
 }
 
