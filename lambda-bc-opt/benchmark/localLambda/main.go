@@ -1,18 +1,51 @@
 package main
 
 import (
-	"context"
 	"fmt"
+	"lambda-bc-opt/db"
 	"log/slog"
-	"sync"
-	"time"
+	"net/http"
 	"os"
 
-	"github.com/redis/go-redis/v9"
+	// "github.com/redis/go-redis/v9"
 )
 
 const workerCount int = 1000
-const invCount int = 100000
+
+type Op struct {
+	opType string
+	callback chan struct{}
+}
+
+const bufferSize int = 1000000
+var tasksChan chan Op = make(chan Op, bufferSize)
+
+func startWorkers() {
+	// db := redis.NewClient(&redis.Options{
+	//	Addr: fmt.Sprintf("%s:%s", "localhost", "6379"),
+	//	DB:   0,
+	//	PoolSize: 1,
+	// })
+	// ctx := context.Background()
+	db := db.ConsRedisDB("localhost", "6379")
+
+	for i := 0; i < workerCount; i++ {
+		f := func(goroutineId int) {
+			for {
+				select {
+				case op := <-tasksChan: // a task is assigned
+					slog.Debug(fmt.Sprintf("opType <%s> - goroutineId %d : Starting", op.opType, goroutineId))
+					result, _ := db.Get("cnt")
+					op.callback <- struct{}{}
+					slog.Debug(fmt.Sprintf("opType <%s> - goroutineId %d : Ended - %s", op.opType, goroutineId, result))
+				}
+				slog.Debug("recurse")
+			}
+		}
+		go f(i)
+	}
+}
+
 
 func main() {
 	opts := &slog.HandlerOptions{
@@ -24,62 +57,25 @@ func main() {
 	slog.SetDefault(logger)
 
 	slog.Info("Starting Benchmark")
-	db := redis.NewClient(&redis.Options{
-		Addr: fmt.Sprintf("%s:%s", "localhost", "6379"),
-		DB:   0,
-		PoolSize: 1,
-	})
-	slog.Info("DB connected")
 
-	// each of workers listern for the taskChan
-	var tasksChan chan string = make(chan string, invCount)
-	var done chan struct{} = make(chan struct{})
 
-	// creating the task
-	for i := 0; i < invCount; i++ {
-		tasksChan <- "Get"
-	}
+	go func() {
+		slog.Info("Running tasks: Starting")
+		startWorkers()
+	} ()
 
-	slog.Info("Tasks are ready in tasksChan")
-	time.Sleep(5 * time.Second)
-
-	// creating the workers (each worker is a goroutine)
-	slog.Info("Running tasks: Starting")
-	start := time.Now()
-	var wg sync.WaitGroup
-	wg.Add(invCount) // Done when goroutine finished the work
-
-	ctx := context.Background()
-
-	for i := 0; i < workerCount; i++ {
-		f := func(goroutineId int) {
-			for {
-				slog.Debug("recurse")
-				select {
-				case <-done:
-					return
-				case task := <-tasksChan: // a task is assigned
-					slog.Debug(fmt.Sprintf("task <%s> - goroutineId %d : Starting", task, goroutineId))
-					result := db.Get(ctx, "cnt")
-					slog.Debug(fmt.Sprintf("task <%s> - goroutineId %d : Done - result : %s", task, goroutineId, result))
-					wg.Done()
-				}
-			}
+	httpHandler := func(w http.ResponseWriter, r *http.Request) {
+		cb := make(chan struct{})
+		tasksChan <- Op{
+			opType: "Get",
+			callback: cb,
 		}
-		go f(i)
+		<-cb
 	}
-	wg.Wait()
-	// done <- struct{}{}
-
-	slog.Info("Running tasks: Done")
-	duration := time.Since(start)
-	slog.Info(fmt.Sprintf("Duration => %v", duration))
-	// log.SetOutput(io.Discard)
-	// http.HandleFunc("/getterNaive", getterHandler)
-
-	// log.Println("Starting server on :8080")
-	// err := http.ListenAndServe(":8080", nil)
-	// if err != nil {
-	//	log.Fatal("ListenAndServe: ", err)
-	// }
+	http.HandleFunc("/locallambda", httpHandler)
+	slog.Info("Starting server on :8080")
+	err := http.ListenAndServe(":8080", nil)
+	if err != nil {
+		slog.Error("ListenAndServe: ", err)
+	}
 }

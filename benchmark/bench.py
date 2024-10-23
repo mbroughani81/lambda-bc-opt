@@ -101,6 +101,33 @@ def read_from_csv(filename):
     return rps_values, latency_50th, latency_90th, latency_99th
 
 # In[]:
+# LOCALLAMBDA
+url = "http://localhost:8080/locallambda"
+latency_50th = []
+latency_90th = []
+latency_99th = []
+thread_cnt = 10
+conn_cnt = 100
+rps_values = [2000 * x for x in range(5,10)]
+for rps in rps_values:
+    print(f"Running wrk2 for {rps} requests per second...")
+    output = run_wrk(rps, url, thread_cnt, conn_cnt, 30)
+    time.sleep(5)
+    latencies = parse_latency_output(output)
+    print(f"laaatt => {output}")
+    print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
+    print(f"90th percentile: {latencies.get('90th', 'N/A')} ms")
+    print(f"99th percentile: {latencies.get('99th', 'N/A')} ms")
+    # Append the results
+    latency_50th.append(latencies.get('50th', None))
+    latency_90th.append(latencies.get('90th', None))
+    latency_99th.append(latencies.get('99th', None))
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "locallambda-naive.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "locallambda-naive.png")
+
+
+
+# In[]:
 # Code-level batch call optimization
 url = "http://localhost:8080/getterMock"
 latency_50th = []
@@ -174,83 +201,6 @@ for rps in rps_values:
     latency_99th.append(latencies.get('99th', None))
 export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "getter-batched-pool-20.csv")
 plot(rps_values, latency_50th, latency_90th, latency_99th, "getter-batched-pool-20.png")
-
-# In[]:
-# naive 1-connection gencnt without lambda
-url = "http://localhost:8080/getter"
-latency_50th = []
-latency_90th = []
-latency_99th = []
-thread_cnt = 10
-conn_cnt = 10
-rps_values = [1000 * x for x in range(9,10)]
-for rps in rps_values:
-    print(f"Running wrk2 for {rps} requests per second...")
-    output = run_wrk(rps, url, thread_cnt, conn_cnt, 30)
-    time.sleep(20)
-    latencies = parse_latency_output(output)
-    print(f"laaatt => {output}")
-    print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
-    print(f"90th percentile: {latencies.get('90th', 'N/A')} ms")
-    print(f"99th percentile: {latencies.get('99th', 'N/A')} ms")
-    # Append the results
-    latency_50th.append(latencies.get('50th', None))
-    latency_90th.append(latencies.get('90th', None))
-    latency_99th.append(latencies.get('99th', None))
-export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencntNaive-withoutLambda.csv")
-plot(rps_values, latency_50th, latency_90th, latency_99th, "genCntNaive-withoutLambda.png")
-
-# In[]:
-# naive 1-connection gencnt with lambda
-url = "http://10.10.0.1:3233/api/v1/namespaces/_/actions/gencntNaive?blocking=true&result=true"
-latency_50th = []
-latency_90th = []
-latency_99th = []
-thread_cnt = 1
-conn_cnt = 1
-rps_values = [50 * x for x in range(1,10)]
-for rps in rps_values:
-    print(f"Running wrk2 for {rps} requests per second...")
-    output = run_wrk_wsk(rps, url, thread_cnt, conn_cnt, 30)
-    time.sleep(20)
-    latencies = parse_latency_output(output)
-    print(f"laaatt => {output}")
-    print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
-    print(f"90th percentile: {latencies.get('90th', 'N/A')} ms")
-    print(f"99th percentile: {latencies.get('99th', 'N/A')} ms")
-    # Append the results
-    latency_50th.append(latencies.get('50th', None))
-    latency_90th.append(latencies.get('90th', None))
-    latency_99th.append(latencies.get('99th', None))
-export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencntNaive-withLambda.csv")
-plot(rps_values, latency_50th, latency_90th, latency_99th, "genCntNaive-withLambd.png")
-
-
-# In[]:
-# gencntMock
-url = "http://10.10.0.1:3233/api/v1/namespaces/_/actions/gencntMock?blocking=true&result=true"
-latency_50th = []
-latency_90th = []
-latency_99th = []
-thread_cnt = 3
-conn_cnt = 6
-rps_values = [20 * x for x in range(5,15)]
-for rps in rps_values:
-    print(f"Running wrk2 for {rps} requests per second...")
-    output = run_wrk_wsk(rps, url, thread_cnt, conn_cnt, 30)
-    time.sleep(10)
-    latencies = parse_latency_output(output)
-    print(f"output => {output}")
-    print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
-    print(f"90th percentile: {latencies.get('90th', 'N/A')} ms")
-    print(f"99th percentile: {latencies.get('99th', 'N/A')} ms")
-    # Append the results
-    latency_50th.append(latencies.get('50th', None))
-    latency_90th.append(latencies.get('90th', None))
-    latency_99th.append(latencies.get('99th', None))
-export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencntMock-bin-3.csv")
-plot(rps_values, latency_50th, latency_90th, latency_99th, "gencntMock-bin-3.png")
-
 
 # In[]:
 # gencntNaive
