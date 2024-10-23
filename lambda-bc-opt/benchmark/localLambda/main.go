@@ -6,8 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-
-	// "github.com/redis/go-redis/v9"
 )
 
 const workerCount int = 1000
@@ -19,15 +17,10 @@ type Op struct {
 
 const bufferSize int = 1000000
 var tasksChan chan Op = make(chan Op, bufferSize)
+var rdb db.KeyValueStoreDB
 
 func startWorkers() {
-	// db := redis.NewClient(&redis.Options{
-	//	Addr: fmt.Sprintf("%s:%s", "localhost", "6379"),
-	//	DB:   0,
-	//	PoolSize: 1,
-	// })
-	// ctx := context.Background()
-	db := db.ConsRedisDB("localhost", "6379")
+	rdb = db.ConsRedisDB("localhost", "6379")
 
 	for i := 0; i < workerCount; i++ {
 		f := func(goroutineId int) {
@@ -35,7 +28,7 @@ func startWorkers() {
 				select {
 				case op := <-tasksChan: // a task is assigned
 					slog.Debug(fmt.Sprintf("opType <%s> - goroutineId %d : Starting", op.opType, goroutineId))
-					result, _ := db.Get("cnt")
+					result, _ := rdb.Get("cnt")
 					op.callback <- struct{}{}
 					slog.Debug(fmt.Sprintf("opType <%s> - goroutineId %d : Ended - %s", op.opType, goroutineId, result))
 				}
@@ -72,6 +65,8 @@ func main() {
 		}
 		<-cb
 	}
+
+	// rdb = db.ConsMockRedisDB()
 	http.HandleFunc("/locallambda", httpHandler)
 	slog.Info("Starting server on :8080")
 	err := http.ListenAndServe(":8080", nil)
