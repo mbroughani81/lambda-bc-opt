@@ -12,11 +12,12 @@ import (
 )
 
 const workerCount int = 1000
-const invCount int = 50000000
+const invCount int = 100000
 
 func main() {
 	opts := &slog.HandlerOptions{
 		Level: slog.LevelInfo,
+		// Level: slog.LevelDebug,
 	}
 	handler := slog.NewTextHandler(os.Stdout, opts)
 	logger := slog.New(handler)
@@ -46,25 +47,30 @@ func main() {
 	slog.Info("Running tasks: Starting")
 	start := time.Now()
 	var wg sync.WaitGroup
-	wg.Add(workerCount) // Done when goroutine finished the work
+	wg.Add(invCount) // Done when goroutine finished the work
 
 	ctx := context.Background()
 
 	for i := 0; i < workerCount; i++ {
 		f := func(goroutineId int) {
-			select {
-			case <-done:
-				return
-			case task := <-tasksChan: // a task is assigned
-				slog.Debug(fmt.Sprintf("task <%s> - goroutineId %d : Starting", task, goroutineId))
-				result := db.Get(ctx, "cnt")
-				slog.Debug(fmt.Sprintf("task <%s> - goroutineId %d : Done - result : %s", task, goroutineId, result))
-				wg.Done()
+			for {
+				slog.Debug("recurse")
+				select {
+				case <-done:
+					return
+				case task := <-tasksChan: // a task is assigned
+					slog.Debug(fmt.Sprintf("task <%s> - goroutineId %d : Starting", task, goroutineId))
+					result := db.Get(ctx, "cnt")
+					slog.Debug(fmt.Sprintf("task <%s> - goroutineId %d : Done - result : %s", task, goroutineId, result))
+					wg.Done()
+				}
 			}
 		}
 		go f(i)
 	}
 	wg.Wait()
+	// done <- struct{}{}
+
 	slog.Info("Running tasks: Done")
 	duration := time.Since(start)
 	slog.Info(fmt.Sprintf("Duration => %v", duration))
