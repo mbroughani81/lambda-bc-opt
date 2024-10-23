@@ -8,27 +8,28 @@ import (
 	"os"
 )
 
-const workerCount int = 1000
-
 type Op struct {
 	opType string
 	callback chan struct{}
 }
 
+const workerCount int = 1000
 const bufferSize int = 1000000
+
 var tasksChan chan Op = make(chan Op, bufferSize)
-var rdb db.KeyValueStoreDB
+var rdbArray [workerCount]db.KeyValueStoreDB
 
 func startWorkers() {
+	// start work
 	for i := 0; i < workerCount; i++ {
-		f := func(goroutineId int) {
+		f := func(workerId int) {
 			for {
 				select {
 				case op := <-tasksChan: // a task is assigned
-					slog.Debug(fmt.Sprintf("opType <%s> - goroutineId %d : Starting", op.opType, goroutineId))
-					result, _ := rdb.Get("cnt")
+					slog.Debug(fmt.Sprintf("opType <%s> - workerId %d : Starting", op.opType, workerId))
+					result, _ := rdbArray[workerId].Get("cnt")
 					op.callback <- struct{}{}
-					slog.Debug(fmt.Sprintf("opType <%s> - goroutineId %d : Ended - %s", op.opType, goroutineId, result))
+					slog.Debug(fmt.Sprintf("opType <%s> - workerId %d : Ended - %s", op.opType, workerId, result))
 				}
 				slog.Debug("recurse")
 			}
@@ -50,6 +51,7 @@ func main() {
 	slog.Info("Starting Benchmark")
 
 
+	// 1: Start workers
 	go func() {
 		slog.Info("Running tasks: Starting")
 		startWorkers()
@@ -64,9 +66,13 @@ func main() {
 		<-cb
 	}
 
-	rdb = db.ConsMockRedisDB()
-	// rdb = db.ConsRedisDB("localhost", "6379")
+	// 2: Create Worker's db connection
+	for i := 0; i < workerCount; i++ {
+		rdbArray[i] = db.ConsRedisDB("localhost", "6379")
+		// rdbArray[i] = db.ConsMockRedisDB()
+	}
 
+	// 3: Start endpoint
 	http.HandleFunc("/locallambda", httpHandler)
 	slog.Info("Starting server on :8080")
 	err := http.ListenAndServe(":8080", nil)
