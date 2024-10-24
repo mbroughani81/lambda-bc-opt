@@ -109,7 +109,7 @@ latency_90th = []
 latency_99th = []
 thread_cnt = 10
 conn_cnt = 100
-rps_values = [200000 * x for x in range(1,10)]
+rps_values = [2000 * x for x in range(1,10)]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
     output = run_wrk(rps, url, thread_cnt, conn_cnt, 30)
