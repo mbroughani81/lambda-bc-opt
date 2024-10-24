@@ -10,7 +10,7 @@ import (
 	"lambda-bc-opt/db"
 )
 
-var rdb db.KeyValueStoreDB = db.ConsBatchedRedisDBV2("10.10.0.1:8080")
+var rdb db.KeyValueStoreDB = db.ConsBatchedRedisDBV2("10.10.0.1", "8080")
 
 func init() {
 	log.SetOutput(os.Stdout)
