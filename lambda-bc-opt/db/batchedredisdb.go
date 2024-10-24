@@ -3,7 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"sync"
 	"time"
@@ -38,9 +38,9 @@ func execPipeline(ctx context.Context, pipe redis.Pipeliner) error {
 		if err == nil {
 			return nil
 		} else if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-			log.Printf("Pipeline operation timed out. Retrying... attempt %d", retries+1)
+			slog.Warn(fmt.Sprintf("Pipeline operation timed out. Retrying... attempt %d", retries+1))
 		} else if err != nil && err != redis.Nil {
-			log.Printf("Pipeline failed with error: %v. Retrying... attempt %d", err, retries+1)
+			slog.Warn(fmt.Sprintf("Pipeline failed with error: %v. Retrying... attempt %d", err, retries+1))
 		}
 		time.Sleep(2 * time.Millisecond)
 	}
@@ -69,7 +69,7 @@ func execBatch(rdb *BatchedRedisDB) {
 						redisResponse: result,
 						batchOp:       cur_op}
 				default:
-					log.Fatalln("Unknown operation type")
+					slog.Error("Unknown operation type")
 				}
 			}
 		default:
@@ -77,8 +77,8 @@ func execBatch(rdb *BatchedRedisDB) {
 		}
 	}
 	if processedCount > 0 {
-		log.Printf(">> processedCount %d", processedCount)
-		log.Printf(">> batch size %d", len(batch))
+		slog.Debug(fmt.Sprintf(">> processedCount %d", processedCount))
+		slog.Debug(fmt.Sprintf(">> batch size %d", len(batch)))
 		execPipeline(ctx, pipe)
 	}
 forLoop:
@@ -110,7 +110,7 @@ forLoop:
 	if processedCount > 0 {
 		curExec := time.Now()
 		diff := curExec.Sub(lastExec)
-		log.Println("Time difference:", diff)
+		slog.Debug(fmt.Sprintf("Time difference: %v", diff))
 		lastExec = curExec
 	}
 }
@@ -122,11 +122,11 @@ func appendToBatch(rdb *BatchedRedisDB, op Op, ch chan<- string) {
 	case SetOp:
 		batch <- BatchOp{op, ch}
 	default:
-		log.Fatalln("Unknown operation type")
+		slog.Error("Unknown operation type")
 	}
 	if len(batch) >= batchSize {
 		execBatch(rdb)
-		log.Println("exec: BATCH FULL!")
+		slog.Debug("exec: BATCH FULL!")
 	}
 }
 
@@ -170,7 +170,7 @@ func ConsBatchedRedisDB(host string, port string) *BatchedRedisDB {
 	go func(rdb *BatchedRedisDB) {
 		for range time.Tick(loopInterval) {
 			if len(batch) > 0 {
-				log.Printf("exec: TL reached! batch size : %d", len(batch))
+				slog.Debug(fmt.Sprintf("exec: TL reached! batch size : %d", len(batch)))
 				execBatch(rdb)
 			}
 		}

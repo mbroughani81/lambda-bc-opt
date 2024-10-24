@@ -58,7 +58,8 @@ func main() {
 	port := utility.GetEnv("APP_PORT", "8090")
 	address := fmt.Sprintf("%s:%s", host, port)
 
-	rdb = db.ConsRedisDB(redisHost, redisPort)
+	// rdb = db.ConsRedisDB(redisHost, redisPort)
+	rdb = db.ConsBatchedRedisDB(redisHost, redisPort)
 	http.HandleFunc("/get", getHandler)
 
 	fmt.Printf("Server listening onnn %s\n", address)

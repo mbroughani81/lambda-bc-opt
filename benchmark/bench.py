@@ -15,17 +15,23 @@ import csv
 
 # In[]:
 # Openwhisk run wrk
-# Function to run wrk and get the output
-def run_wrk_wsk(rps, action_url,thread_cnt=10, conn_cnt=20, duration=30):
+def run_wrk_wsk(rps, action_url, thread_cnt=10, conn_cnt=20, duration=30):
     """Run wrk2 for a specific RPS and return the latency data."""
     command = f"wrk -t{thread_cnt} -c{conn_cnt} -d{duration}s -R{rps} --latency -s visitorcounter_request_openwhisk.lua {action_url}"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     return result.stdout
 
 # In[]:
+# run wrk for batchservice
+def run_wrk_batchservice(rps, action_url, thread_cnt=10, conn_cnt=20, duration=30):
+    """Run wrk2 for a specific RPS and return the latency data."""
+    command = f"wrk -t{thread_cnt} -c{conn_cnt} -d{duration}s -R{rps} --latency -s post_request.lua {action_url}"
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    return result.stdout
+
+# In[]:
 # run wrk
-# Function to run wrk and get the output
-def run_wrk(rps, action_url,thread_cnt=10, conn_cnt=20, duration=30):
+def run_wrk(rps, action_url, thread_cnt=10, conn_cnt=20, duration=30):
     """Run wrk2 for a specific RPS and return the latency data."""
     command = f"wrk -t{thread_cnt} -c{conn_cnt} -d{duration}s -R{rps} --latency {action_url}"
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
@@ -102,14 +108,13 @@ def read_from_csv(filename):
 
 # In[]:
 # LOCALLAMBDA
-# docker exec -it redis redis-benchmark -c 1 -n 100000 -t get -q
 url = "http://localhost:8080/locallambda"
 latency_50th = []
 latency_90th = []
 latency_99th = []
 thread_cnt = 10
 conn_cnt = 100
-rps_values = [2000 * x for x in range(4,10)]
+rps_values = [2000 * x for x in range(8,13)]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
     output = run_wrk(rps, url, thread_cnt, conn_cnt, 30)
@@ -123,8 +128,33 @@ for rps in rps_values:
     latency_50th.append(latencies.get('50th', None))
     latency_90th.append(latencies.get('90th', None))
     latency_99th.append(latencies.get('99th', None))
-export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "locallambda-1.csv")
-plot(rps_values, latency_50th, latency_90th, latency_99th, "locallambda-1.png")
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "locallambda-ser-batched-p100-1.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "locallambda-ser-batched-p100-1.png")
+
+# In[]:
+# BATCHSERVICE
+url = "http://localhost:8090/get"
+latency_50th = []
+latency_90th = []
+latency_99th = []
+thread_cnt = 10
+conn_cnt = 100
+rps_values = [10000 * x for x in range(10,15)]
+for rps in rps_values:
+    print(f"Running wrk2 for {rps} requests per second...")
+    output = run_wrk_batchservice(rps, url, thread_cnt, conn_cnt, 30)
+    time.sleep(5)
+    latencies = parse_latency_output(output)
+    print(f"laaatt => {output}")
+    print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
+    print(f"90th percentile: {latencies.get('90th', 'N/A')} ms")
+    print(f"99th percentile: {latencies.get('99th', 'N/A')} ms")
+    # Append the results
+    latency_50th.append(latencies.get('50th', None))
+    latency_90th.append(latencies.get('90th', None))
+    latency_99th.append(latencies.get('99th', None))
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "batchservice.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "batchservice.png")
 
 # In[]:
 # Code-level batch call optimization
