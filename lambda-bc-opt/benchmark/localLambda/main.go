@@ -14,7 +14,7 @@ type Op struct {
 	callback chan struct{}
 }
 
-const workerCount int = 1000
+const workerCount int = 10
 const bufferSize int = 1000000
 
 var tasksChan chan Op = make(chan Op, bufferSize)
