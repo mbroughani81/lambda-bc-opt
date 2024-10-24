@@ -6,13 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 )
 
 type BatchedRedisDBV2 struct {
 	batchserviceIP string
+	batchservicePort string
 }
 
 func (rdb *BatchedRedisDBV2) Get(k string) (string, error) {
@@ -25,7 +26,7 @@ func (rdb *BatchedRedisDBV2) Get(k string) (string, error) {
 		return "", fmt.Errorf("error serializing GetOp: %v", err)
 	}
 
-	url := fmt.Sprintf("http://%s/get", rdb.batchserviceIP)
+	url := fmt.Sprintf("http://%s:%s/get", rdb.batchserviceIP, rdb.batchservicePort)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return "", fmt.Errorf("error making POST request: %v", err)
@@ -35,8 +36,7 @@ func (rdb *BatchedRedisDBV2) Get(k string) (string, error) {
 	body, err := io.ReadAll(resp.Body)
 
 	end := time.Now()
-	// fmt.Printf("BatchedRedisDBV2 Get => %v", end.Sub(start))
-	log.Printf("BatchedRedisDBV2 Get => %v", end.Sub(start))
+	slog.Debug(fmt.Sprintf("BatchedRedisDBV2 Get => %v", end.Sub(start)))
 
 	if err != nil {
 		return "", fmt.Errorf("error reading response body: %v", err)
@@ -53,8 +53,9 @@ func (rdb *BatchedRedisDBV2) Set(k string, v string) error {
 	return errors.New("Not implemented!")
 }
 
-func ConsBatchedRedisDBV2(batchserviceIP string) *BatchedRedisDBV2 {
+func ConsBatchedRedisDBV2(batchserviceIP string, batchservicePort string) *BatchedRedisDBV2 {
 	return &BatchedRedisDBV2{
 		batchserviceIP: batchserviceIP,
+		batchservicePort: batchservicePort,
 	}
 }

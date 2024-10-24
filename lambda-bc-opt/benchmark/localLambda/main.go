@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"lambda-bc-opt/db"
 	"log/slog"
 	"net/http"
 	"os"
+
+	"lambda-bc-opt/db"
 )
 
 type Op struct {
@@ -38,7 +39,6 @@ func startWorkers() {
 	}
 }
 
-
 func main() {
 	opts := &slog.HandlerOptions{
 		Level: slog.LevelInfo,
@@ -69,7 +69,8 @@ func main() {
 	// 2: Create Worker's db connection
 	for i := 0; i < workerCount; i++ {
 		// rdbArray[i] = db.ConsRedisDB("localhost", "6379")
-		rdbArray[i] = db.ConsMockRedisDB()
+		// rdbArray[i] = db.ConsMockRedisDB()
+		rdbArray[i] = db.ConsBatchedRedisDBV2("127.0.0.1", "8090")
 	}
 
 	// 3: Start endpoint
