@@ -68,8 +68,8 @@ func main() {
 
 	// 2: Create Worker's db connection
 	for i := 0; i < workerCount; i++ {
-		rdbArray[i] = db.ConsRedisDB("localhost", "6379")
-		// rdbArray[i] = db.ConsMockRedisDB()
+		// rdbArray[i] = db.ConsRedisDB("localhost", "6379")
+		rdbArray[i] = db.ConsMockRedisDB()
 	}
 
 	// 3: Start endpoint
