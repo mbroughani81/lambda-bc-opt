@@ -14,7 +14,7 @@ func main() {
 
 	n := 7
 	counter := 0
-	batchedRedisDB := db.ConsBatchedRedisDBV2("10.10.0.1:8080")
+	batchedRedisDB := db.ConsBatchedRedisDBV2("10.10.0.1", "8080")
 	key := "cnt"
 	var wg sync.WaitGroup
 	wg.Add(n)
