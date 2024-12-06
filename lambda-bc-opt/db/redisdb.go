@@ -10,11 +10,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func InitRedis(host string, port string) *redis.Client {
+func InitRedis(host string, port string, poolSize int) *redis.Client {
 	return redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", host, port),
 		DB:       0,
-		PoolSize: 100,
+		PoolSize: poolSize,
 	})
 }
 
@@ -46,7 +46,7 @@ func (rdb *RedisDB) Set(k string, v string) error {
 	return nil
 }
 
-func ConsRedisDB(host string, port string) *RedisDB {
-	rc := InitRedis(host, port)
+func ConsRedisDB(host string, port string, poolSize int) *RedisDB {
+	rc := InitRedis(host, port, poolSize)
 	return &RedisDB{rc: rc}
 }

@@ -6,22 +6,6 @@ import time
 import csv
 
 # In[]:
-# Function to run wrk and get the output
-# def run_wrk(rps, duration=30):
-#     """Run wrk2 for a specific RPS and return the latency data."""
-#     command = f"wrk -t10 -c15 -d{duration}s -R{rps} --latency -s visitorcounter_request.lua http://127.0.0.1:3001/visitorCounter"
-#     result = subprocess.run(command, shell=True, capture_output=True, text=True)
-#     return result.stdout
-
-# In[]:
-# Openwhisk run wrk
-def run_wrk_wsk(rps, action_url, thread_cnt=10, conn_cnt=20, duration=30):
-    """Run wrk2 for a specific RPS and return the latency data."""
-    command = f"wrk -t{thread_cnt} -c{conn_cnt} -d{duration}s -R{rps} --latency -s visitorcounter_request_openwhisk.lua {action_url}"
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    return result.stdout
-
-# In[]:
 # run wrk for batchservice
 def run_wrk_batchservice(rps, action_url, thread_cnt=10, conn_cnt=20, duration=30):
     """Run wrk2 for a specific RPS and return the latency data."""
@@ -114,7 +98,7 @@ latency_90th = []
 latency_99th = []
 thread_cnt = 10
 conn_cnt = 100
-rps_values = [2000 * x for x in range(8,13)]
+rps_values = [5000 * x for x in range(10,15)]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
     output = run_wrk(rps, url, thread_cnt, conn_cnt, 30)
@@ -128,8 +112,8 @@ for rps in rps_values:
     latency_50th.append(latencies.get('50th', None))
     latency_90th.append(latencies.get('90th', None))
     latency_99th.append(latencies.get('99th', None))
-export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "locallambda-ser-naive-w10.csv")
-plot(rps_values, latency_50th, latency_90th, latency_99th, "locallambda-ser-naive-w10.png")
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "naive-w20.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "naive-w20.png")
 
 # In[]:
 # BATCHSERVICE
@@ -230,30 +214,5 @@ for rps in rps_values:
     latency_99th.append(latencies.get('99th', None))
 export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "getter-batched-pool-20.csv")
 plot(rps_values, latency_50th, latency_90th, latency_99th, "getter-batched-pool-20.png")
-
-# In[]:
-# gencntNaive
-url = "http://10.10.0.1:3233/api/v1/namespaces/_/actions/gencntNaive?blocking=true&result=true"
-latency_50th = []
-latency_90th = []
-latency_99th = []
-thread_cnt = 3
-conn_cnt = 6
-rps_values = [20 * x for x in range(5,15)]
-for rps in rps_values:
-    print(f"Running wrk2 for {rps} requests per second...")
-    output = run_wrk_wsk(rps, url, thread_cnt, conn_cnt, 30)
-    time.sleep(10)
-    latencies = parse_latency_output(output)
-    print(f"output => {output}")
-    print(f"50th percentile: {latencies.get('50th', 'N/A')} ms")
-    print(f"90th percentile: {latencies.get('90th', 'N/A')} ms")
-    print(f"99th percentile: {latencies.get('99th', 'N/A')} ms")
-    # Append the results
-    latency_50th.append(latencies.get('50th', None))
-    latency_90th.append(latencies.get('90th', None))
-    latency_99th.append(latencies.get('99th', None))
-export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "gencntNaive-bin-3.csv")
-plot(rps_values, latency_50th, latency_90th, latency_99th, "gencntNaive-bin-3.png")
 
 # %%

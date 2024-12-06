@@ -17,29 +17,30 @@ type Op struct {
 const workerCount int = 10
 const bufferSize int = 1000000
 
-var tasksChan chan Op = make(chan Op, bufferSize)
-var rdbArray [workerCount]db.KeyValueStoreDB
+var tasksChan chan Op = make(chan Op, bufferSize) // Channel of operations, which will be assigned to one of the workers.
+var rdbArray [workerCount]db.KeyValueStoreDB      // Each worker has its own db connection.
 
 func startWorkers() {
 	// start work
-	for i := 0; i < workerCount; i++ {
-		f := func(workerId int) {
-			for {
-				select {
-				case op := <-tasksChan: // a task is assigned
-					slog.Debug(fmt.Sprintf("opType <%s> - workerId %d : Starting", op.opType, workerId))
-					result, _ := rdbArray[workerId].Get("cnt")
-					op.callback <- struct{}{}
-					slog.Debug(fmt.Sprintf("opType <%s> - workerId %d : Ended - %s", op.opType, workerId, result))
-				}
-				slog.Debug("recurse")
+	workerFn := func(workerId int) {
+		for {
+			select {
+			case op := <-tasksChan: // a task is assigned
+				slog.Debug(fmt.Sprintf("opType <%s> - workerId %d : Starting", op.opType, workerId))
+				result, _ := rdbArray[workerId].Get("cnt")
+				op.callback <- struct{}{}
+				slog.Debug(fmt.Sprintf("opType <%s> - workerId %d : Ended - %s", op.opType, workerId, result))
 			}
+			slog.Debug("recurse")
 		}
-		go f(i)
+	}
+	for i := 0; i < workerCount; i++ {
+		go workerFn(i)
 	}
 }
 
 func main() {
+	// Logging setup
 	opts := &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 		// Level: slog.LevelDebug,
@@ -47,16 +48,15 @@ func main() {
 	handler := slog.NewTextHandler(os.Stdout, opts)
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
+	//
 
-	slog.Info("Starting Benchmark")
-
-
+	slog.Info("Starting benchmark")
 	// 1: Start workers
 	go func() {
-		slog.Info("Running tasks: Starting")
 		startWorkers()
 	} ()
-
+	// the httpHandler will create a task.
+	// The task will be declared done when the worker invokes the callback of task
 	httpHandler := func(w http.ResponseWriter, r *http.Request) {
 		cb := make(chan struct{})
 		tasksChan <- Op{
@@ -68,9 +68,9 @@ func main() {
 
 	// 2: Create Worker's db connection
 	for i := 0; i < workerCount; i++ {
-		// rdbArray[i] = db.ConsRedisDB("localhost", "6379")
+		rdbArray[i] = db.ConsRedisDB("localhost", "6379")
 		// rdbArray[i] = db.ConsMockRedisDB()
-		rdbArray[i] = db.ConsBatchedRedisDBV2("127.0.0.1", "8090")
+		// rdbArray[i] = db.ConsBatchedRedisDBV2("127.0.0.1", "8090")
 	}
 
 	// 3: Start endpoint
