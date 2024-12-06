@@ -67,10 +67,11 @@ func main() {
 	}
 
 	// 2: Create Worker's db connection
+	ddd := db.ConsBatchedRedisDB("localhost", "6379", 1)
 	for i := 0; i < workerCount; i++ {
-		rdbArray[i] = db.ConsRedisDB("localhost", "6379")
+		// rdbArray[i] = db.ConsRedisDB("localhost", "6379", 1)
 		// rdbArray[i] = db.ConsMockRedisDB()
-		// rdbArray[i] = db.ConsBatchedRedisDBV2("127.0.0.1", "8090")
+		rdbArray[i] = ddd
 	}
 
 	// 3: Start endpoint
