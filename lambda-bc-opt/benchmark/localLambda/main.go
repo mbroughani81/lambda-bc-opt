@@ -14,20 +14,23 @@ type Op struct {
 	callback chan struct{}
 }
 
-const workerCount int = 10
+const workerCount int = 100
 const bufferSize int = 1000000
 
 var tasksChan chan Op = make(chan Op, bufferSize) // Channel of operations, which will be assigned to one of the workers.
 var rdbArray [workerCount]db.KeyValueStoreDB      // Each worker has its own db connection.
 
-func startWorkers() {
+func startWorkers(dbCallCnt int) {
 	// start work
 	workerFn := func(workerId int) {
 		for {
 			select {
 			case op := <-tasksChan: // a task is assigned
 				slog.Debug(fmt.Sprintf("opType <%s> - workerId %d : Starting", op.opType, workerId))
-				result, _ := rdbArray[workerId].Get("cnt")
+				var result string = ""
+				for i := 0; i < dbCallCnt; i++ {
+					result, _ = rdbArray[workerId].Get("cnt")
+				}
 				op.callback <- struct{}{}
 				slog.Debug(fmt.Sprintf("opType <%s> - workerId %d : Ended - %s", op.opType, workerId, result))
 			}
@@ -53,7 +56,7 @@ func main() {
 	slog.Info("Starting benchmark")
 	// 1: Start workers
 	go func() {
-		startWorkers()
+		startWorkers(5)
 	} ()
 	// the httpHandler will create a task.
 	// The task will be declared done when the worker invokes the callback of task
@@ -67,11 +70,11 @@ func main() {
 	}
 
 	// 2: Create Worker's db connection
-	ddd := db.ConsBatchedRedisDB("localhost", "6379", 1)
+	// ddd := db.ConsBatchedRedisDB("localhost", "6379", 1)
 	for i := 0; i < workerCount; i++ {
-		// rdbArray[i] = db.ConsRedisDB("localhost", "6379", 1)
+		rdbArray[i] = db.ConsRedisDB("localhost", "6379", 1)
 		// rdbArray[i] = db.ConsMockRedisDB()
-		rdbArray[i] = ddd
+		// rdbArray[i] = ddd
 	}
 
 	// 3: Start endpoint
