@@ -1,5 +1,4 @@
 request = function()
-    local path = "/get"
     local body = "{\"K\": \"cnt\"}"
     local headers = {}
 
@@ -7,5 +6,5 @@ request = function()
     headers["Content-Type"] = "application/json"
 
     -- Full HTTP request setup
-    return wrk.format("POST", path, headers, body)
+    return wrk.format("POST", nil, headers, body)
 end

@@ -98,7 +98,7 @@ latency_90th = []
 latency_99th = []
 thread_cnt = 10
 conn_cnt = 100
-rps_values = [1000 * x for x in range(15, 20)]
+rps_values = [1000 * x for x in range(1, 10)]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
     output = run_wrk(rps, url, thread_cnt, conn_cnt, 30)
@@ -112,18 +112,18 @@ for rps in rps_values:
     latency_50th.append(latencies.get('50th', None))
     latency_90th.append(latencies.get('90th', None))
     latency_99th.append(latencies.get('99th', None))
-export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "naive-batch-w10.csv")
-plot(rps_values, latency_50th, latency_90th, latency_99th, "naive-batch-w10.png")
+export_to_csv(rps_values, latency_50th, latency_90th, latency_99th, "batch-service.csv")
+plot(rps_values, latency_50th, latency_90th, latency_99th, "batch-service.png")
 
 # In[]:
 # BATCHSERVICE
-url = "http://localhost:8090/get"
+url = "http://127.0.0.1:8090/get"
 latency_50th = []
 latency_90th = []
 latency_99th = []
 thread_cnt = 10
 conn_cnt = 100
-rps_values = [10000 * x for x in range(10,15)]
+rps_values = [10000 * x for x in range(10,11)]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
     output = run_wrk_batchservice(rps, url, thread_cnt, conn_cnt, 30)
