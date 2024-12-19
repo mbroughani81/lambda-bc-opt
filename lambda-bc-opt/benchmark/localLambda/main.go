@@ -15,6 +15,7 @@ type Op struct {
 }
 
 const workerCount int = 100
+// const workerCount int = 1
 const bufferSize int = 1000000
 
 var tasksChan chan Op = make(chan Op, bufferSize) // Channel of operations, which will be assigned to one of the workers.

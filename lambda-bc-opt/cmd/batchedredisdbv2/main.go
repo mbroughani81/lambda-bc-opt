@@ -1,32 +1,32 @@
 package main
 
 import (
+	"fmt"
 	"lambda-bc-opt/db"
-	"log"
-	"sync"
+	"log/slog"
+	"os"
 )
 
 func main() {
-	// batchedRedisDB := db.ConsBatchedRedisDBV2("10.10.0.1:8080")
-	// key := "cnt"
-	// value, _ := batchedRedisDB.Get(key)
-	// log.Printf("key: %s, value: %s", key, value)
-
-	n := 7
-	counter := 0
-	batchedRedisDB := db.ConsBatchedRedisDBV2("10.10.0.1", "8080")
-	key := "cnt"
-	var wg sync.WaitGroup
-	wg.Add(n)
-	result := "???"
-	for i := 0; i < n; i++ {
-		go func() {
-			result, _ = batchedRedisDB.Get(key)
-			counter++
-			log.Printf("counter => %d", counter)
-			wg.Done()
-		}()
+	opts := &slog.HandlerOptions{
+		// Level: slog.LevelInfo,
+		Level: slog.LevelDebug,
 	}
-	wg.Wait()
-	log.Println(result)
+	handler := slog.NewTextHandler(os.Stdout, opts)
+	logger := slog.New(handler)
+	slog.SetDefault(logger)
+
+	n := 10
+	counter := 0
+	batchedRedisDB := db.ConsBatchedRedisDBV2("127.0.0.1", "8090")
+	key := "cnt"
+	for i := 0; i < n; i++ {
+		result, err := batchedRedisDB.Get(key)
+		if err != nil {
+			slog.Warn(err.Error())
+		}
+		counter++
+		slog.Debug(fmt.Sprintf("counter => %d", counter))
+		slog.Debug(fmt.Sprintf("result => %s", result))
+	}
 }
