@@ -1,21 +1,17 @@
 package db
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
-	"time"
+
+	"github.com/valyala/fasthttp"
 )
 
 type BatchedRedisDBV2 struct {
-	batchserviceIP string
-	batchservicePort string
-	buf *bytes.Buffer
-	client *http.Client
+	batchserviceAddress string
+	client *fasthttp.HostClient
 }
 
 
@@ -25,40 +21,21 @@ func (rdb *BatchedRedisDBV2) Get(k string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error serializing GetOp: %v", err)
 	}
-	rdb.buf.Reset()
-	rdb.buf.Write(jsonData)
-	slog.Debug(fmt.Sprintf("buf: %v\n", rdb.buf))
-
-	url := fmt.Sprintf("http://%s:%s/get", rdb.batchserviceIP, rdb.batchservicePort)
-	// resp, err := http.Post(url, "application/json", rdb.buf) //use different client for each worker!
-	req, err := http.NewRequest(http.MethodPost, url, rdb.buf)
+	slog.Debug(fmt.Sprintf("XX %s, %s", k, rdb.batchserviceAddress))
+	req := fasthttp.AcquireRequest()
+	req.SetHost(rdb.batchserviceAddress)
+	req.Header.SetMethod(fasthttp.MethodPost)
+	req.SetBody(jsonData)
+	resp := fasthttp.AcquireResponse()
+	err = rdb.client.Do(req, resp)
 	if err != nil {
 		panic(err)
 	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := rdb.client.Do(req)
-	// resp := &http.Response{
-	//	Status:     "200 OK",
-	//	StatusCode: http.StatusOK,
-	//	Header:     make(http.Header),
-	//	Body:       io.NopCloser(bytes.NewBufferString("Hello, this is a mock response!")),
-	// }
-	if err != nil {
-		return "", fmt.Errorf("error making POST request: %v", err)
-	}
+	fasthttp.ReleaseRequest(req)
 
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-
-	if err != nil {
-		return "", fmt.Errorf("error reading response body: %v", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("received non-OK response: %s", body)
-	}
-
-	return string(body), nil
+	body := string(resp.Body())
+	fasthttp.ReleaseResponse(resp)
+	return body, nil
 }
 
 func (rdb *BatchedRedisDBV2) Set(k string, v string) error {
@@ -66,20 +43,13 @@ func (rdb *BatchedRedisDBV2) Set(k string, v string) error {
 }
 
 func ConsBatchedRedisDBV2(batchserviceIP string, batchservicePort string) *BatchedRedisDBV2 {
-	buf := bytes.NewBuffer(make([]byte, 1000))
-	transport := &http.Transport{
-		// MaxIdleConns:        100,
-		// IdleConnTimeout:     90 * time.Second,
-		DisableKeepAlives:   false,
-	}
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-		Transport: transport,
+	address := fmt.Sprintf("%s:%s", batchserviceIP, batchservicePort)
+	slog.Debug(fmt.Sprintf("Address is %s", address))
+	client := &fasthttp.HostClient{
+		Addr: address,
 	}
 	return &BatchedRedisDBV2{
-		batchserviceIP: batchserviceIP,
-		batchservicePort: batchservicePort,
-		buf: buf,
+		batchserviceAddress: address,
 		client: client,
 	}
 }

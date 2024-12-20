@@ -17,7 +17,7 @@ func main() {
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
 
-	n := 20000
+	n := 2000
 	counter := 0
 	batchedRedisDB := db.ConsBatchedRedisDBV2("127.0.0.1", "8090")
 	// batchedRedisDB := db.ConsBatchedRedisDB("127.0.0.1", "6379", 1)
