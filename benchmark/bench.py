@@ -98,7 +98,7 @@ latency_90th = []
 latency_99th = []
 thread_cnt = 10
 conn_cnt = 100
-rps_values = [5000 * x for x in range(30,31)]
+rps_values = [5000 * x for x in range(20,21)]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
     output = run_wrk(rps, url, thread_cnt, conn_cnt, 30)
@@ -121,8 +121,8 @@ url = "http://127.0.0.1:8090/get"
 latency_50th = []
 latency_90th = []
 latency_99th = []
-thread_cnt = 10
-conn_cnt = 100
+thread_cnt = 20
+conn_cnt = 400
 rps_values = [50000 * x for x in range(10,11)]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
