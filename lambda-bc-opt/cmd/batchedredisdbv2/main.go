@@ -5,6 +5,7 @@ import (
 	"lambda-bc-opt/db"
 	"log/slog"
 	"os"
+	"time"
 )
 
 func main() {
@@ -16,17 +17,25 @@ func main() {
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
 
-	n := 10
+	n := 20000
 	counter := 0
 	batchedRedisDB := db.ConsBatchedRedisDBV2("127.0.0.1", "8090")
+	// batchedRedisDB := db.ConsBatchedRedisDB("127.0.0.1", "6379", 1)
+
 	key := "cnt"
+
+	start := time.Now()
 	for i := 0; i < n; i++ {
+
 		result, err := batchedRedisDB.Get(key)
 		if err != nil {
 			slog.Warn(err.Error())
 		}
 		counter++
-		slog.Debug(fmt.Sprintf("counter => %d", counter))
+		// slog.Debug(fmt.Sprintf("counter => %d", counter))
 		slog.Debug(fmt.Sprintf("result => %s", result))
+
 	}
+	end := time.Now()
+	slog.Debug(fmt.Sprintf("BatchedRedisDBV2 Get => %v", end.Sub(start)))
 }

@@ -20,8 +20,6 @@ type BatchedRedisDBV2 struct {
 
 
 func (rdb *BatchedRedisDBV2) Get(k string) (string, error) {
-	start := time.Now()
-
 	op := GetOp{K: k}
 	jsonData, err := json.Marshal(op)
 	if err != nil {
@@ -52,9 +50,6 @@ func (rdb *BatchedRedisDBV2) Get(k string) (string, error) {
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 
-	end := time.Now()
-	slog.Debug(fmt.Sprintf("BatchedRedisDBV2 Get => %v", end.Sub(start)))
-
 	if err != nil {
 		return "", fmt.Errorf("error reading response body: %v", err)
 	}
@@ -73,8 +68,8 @@ func (rdb *BatchedRedisDBV2) Set(k string, v string) error {
 func ConsBatchedRedisDBV2(batchserviceIP string, batchservicePort string) *BatchedRedisDBV2 {
 	buf := bytes.NewBuffer(make([]byte, 1000))
 	transport := &http.Transport{
-		MaxIdleConns:        100,
-		IdleConnTimeout:     90 * time.Second,
+		// MaxIdleConns:        100,
+		// IdleConnTimeout:     90 * time.Second,
 		DisableKeepAlives:   false,
 	}
 	client := &http.Client{
