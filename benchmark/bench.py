@@ -123,7 +123,7 @@ latency_90th = []
 latency_99th = []
 thread_cnt = 10
 conn_cnt = 100
-rps_values = [50000 * x for x in range(10,11)]
+rps_values = [20000 * x for x in range(10,11)]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")
     output = run_wrk_batchservice(rps, url, thread_cnt, conn_cnt, 30)

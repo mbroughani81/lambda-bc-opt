@@ -14,7 +14,7 @@ type Op struct {
 	callback chan struct{}
 }
 
-const workerCount int = 50
+const workerCount int = 100
 // const workerCount int = 1
 const bufferSize int = 1000000
 

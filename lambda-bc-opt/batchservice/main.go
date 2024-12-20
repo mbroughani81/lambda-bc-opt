@@ -51,6 +51,7 @@ func getHandler(ctx *fasthttp.RequestCtx) {
 	}
 
 	result, err := rdb.Get(getOp.K)
+	// result := "gooz"
 	if err != nil {
 		panic(err)
 	}
