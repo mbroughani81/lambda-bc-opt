@@ -121,8 +121,8 @@ url = "http://127.0.0.1:8090/get"
 latency_50th = []
 latency_90th = []
 latency_99th = []
-thread_cnt = 20
-conn_cnt = 400
+thread_cnt = 10
+conn_cnt = 100
 rps_values = [50000 * x for x in range(10,11)]
 for rps in rps_values:
     print(f"Running wrk2 for {rps} requests per second...")

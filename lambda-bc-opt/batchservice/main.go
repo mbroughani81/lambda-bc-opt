@@ -1,44 +1,62 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"os"
 	"log/slog"
-	"net/http"
+	"encoding/json"
+	"os"
 
 	"lambda-bc-opt/db"
 	"lambda-bc-opt/utility"
+
+	"github.com/valyala/fasthttp"
 )
 
 var rdb db.KeyValueStoreDB
 
-func getHandler (w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
-		return
-	}
+// func getHandler (w http.ResponseWriter, r *http.Request) {
+//	if r.Method != http.MethodPost {
+//		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
+//		return
+//	}
 
-	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "Error reading request body", http.StatusBadRequest)
-		return
-	}
+//	defer r.Body.Close()
+//	body, err := io.ReadAll(r.Body)
+//	if err != nil {
+//		http.Error(w, "Error reading request body", http.StatusBadRequest)
+//		return
+//	}
+
+//	var getOp db.GetOp
+//	err = json.Unmarshal(body, &getOp)
+//	if err != nil {
+//		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+//		return
+//	}
+
+//	result, _ := rdb.Get(getOp.K)
+//	slog.Debug(fmt.Sprintf("Received key: %s => %s\n", getOp.K, result))
+
+//	w.WriteHeader(http.StatusOK)
+//	w.Write([]byte(result))
+// }
+func getHandler(ctx *fasthttp.RequestCtx) {
+	body := ctx.Request.Body()
 
 	var getOp db.GetOp
-	err = json.Unmarshal(body, &getOp)
+
+	err := json.Unmarshal(body, &getOp)
 	if err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		return
+		panic(err)
 	}
 
-	result, _ := rdb.Get(getOp.K)
-	slog.Debug(fmt.Sprintf("Received key: %s => %s\n", getOp.K, result))
+	result, err := rdb.Get(getOp.K)
+	if err != nil {
+		panic(err)
+	}
+	slog.Debug(fmt.Sprintf("%s value in DB => %s\n", getOp.K, result))
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(result))
+	ctx.SetBodyString(result)
 }
 
 func main() {
@@ -61,12 +79,9 @@ func main() {
 
 	// rdb = db.ConsRedisDB(redisHost, redisPort, 1)
 	rdb = db.ConsBatchedRedisDB(redisHost, redisPort, 1)
-	http.HandleFunc("/get", getHandler)
 
 	fmt.Printf("Server listening onnn %s\n", address)
-	err := http.ListenAndServe(address, nil)
-
-	if err != nil {
-		slog.Error("ListenAndServe: ", err)
+	if err := fasthttp.ListenAndServe(address, getHandler); err != nil {
+		slog.Error(fmt.Sprintf("Error in ListenAndServe: %v", err))
 	}
 }
